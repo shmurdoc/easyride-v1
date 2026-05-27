@@ -39,6 +39,14 @@ jobs:
           php -r "echo 'APP_KEY=base64:' . base64_encode(random_bytes(32)) . PHP_EOL;" > .env.tmp
           grep -v '^APP_KEY=' .env >> .env.tmp
           mv .env.tmp .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "QUEUE_CONNECTION=sync" >> .env
+          echo "MAIL_MAILER=array" >> .env
+          echo "BROADCAST_CONNECTION=null" >> .env
 
       - name: Install dependencies
         run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
