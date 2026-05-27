@@ -22,7 +22,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'tenant_id', 'name', 'email', 'password', 'phone_number',
-        'role', 'is_active', 'is_online',
+        'role', 'is_active', 'is_online', 'email_verified_at',
         'current_latitude', 'current_longitude',
         'last_location_update', 'current_ride_id',
     ];

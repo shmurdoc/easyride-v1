@@ -51,7 +51,7 @@ class AuthTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'test@example.com',
-            'password' => bcrypt('Password1!'),
+            'password' => 'Password1!',
         ]);
 
         $response = $this->postJson('/api/v1/auth/login', [
@@ -67,7 +67,7 @@ class AuthTest extends TestCase
     {
         User::factory()->create([
             'email' => 'test@example.com',
-            'password' => bcrypt('Password1!'),
+            'password' => 'Password1!',
         ]);
 
         $response = $this->postJson('/api/v1/auth/login', [
