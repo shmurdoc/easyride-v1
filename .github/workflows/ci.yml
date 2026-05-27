@@ -55,21 +55,22 @@ jobs:
       - name: Run database migrations
         run: cd backend && php artisan migrate --force
 
-      - name: Execute tests
-        continue-on-error: true
+      - name: Run diagnostics
         run: |
           cd backend
-          set +e
-          php artisan test > test_out.txt 2>&1
-          rc=$?
-          cat test_out.txt
-          set -e
-          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "Exit code: $rc" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          head -50 test_out.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          exit $rc
+          php -r "echo 'PHP version: ' . PHP_VERSION . PHP_EOL;"
+          php -r "echo 'APP_KEY test: ' . (str_starts_with(env('APP_KEY', ''), 'base64:') ? 'OK' : 'NO_PREFIX') . PHP_EOL;"
+          php -r "echo 'BCrypt rounds: ' . env('BCRYPT_ROUNDS', 'not-set') . PHP_EOL;"
+          php -r "echo 'DB_CONNECTION: ' . env('DB_CONNECTION', 'not-set') . PHP_EOL;"
+          php -r "echo 'APP_KEY length: ' . strlen(env('APP_KEY', '')) . PHP_EOL;"
+          ls -la vendor/bin/phpunit 2>&1 || echo "PHPUnit binary not found"
+          php vendor/bin/phpunit --version 2>&1 || echo "Cannot run phpunit --version"
+
+      - name: Execute tests
+        run: |
+          cd backend
+          php artisan test 2>&1
+          echo "EXIT_CODE=$?"
 
   lint:
     runs-on: ubuntu-latest
