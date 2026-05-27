@@ -108,8 +108,7 @@ class RideMatchingService
             $ride->category,
         );
 
-        foreach ($nearbyDrivers as $driver) {
-            NewRideRequest::dispatch($ride, $driver);
-        }
+        $driverIds = $nearbyDrivers->pluck('id')->toArray();
+        NewRideRequest::dispatch($ride, $driverIds);
     }
 }
