@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: pdo_sqlite, sqlite3, redis, mbstring, zip, bcmath, gd, intl, exif
+          tools: composer:v2
+          coverage: none
+
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Prepare environment
+        run: |
+          cd backend
+          cp .env.example .env
+          php -r "echo 'APP_KEY=' . base64_encode(random_bytes(32)) . PHP_EOL;" > .env.tmp
+          grep -v '^APP_KEY=' .env >> .env.tmp
+          mv .env.tmp .env
+          echo "" >> .env
+          echo "APP_ENV=testing" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "QUEUE_CONNECTION=sync" >> .env
+          echo "MAIL_MAILER=array" >> .env
+          echo "BROADCAST_CONNECTION=null" >> .env
+
+      - name: Install dependencies
+        run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Run database migrations
+        run: cd backend && php artisan migrate --force
+
+      - name: Execute tests
+        run: cd backend && php artisan test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2, phpcs, phpstan
+          coverage: none
+
+      - name: Install dependencies
+        run: cd backend && composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHP CodeSniffer
+        run: cd backend && vendor/bin/phpcs --standard=psr12 app/ config/ routes/ tests/ --ignore=*/ExampleTest.php || true
+
+      - name: PHPStan
+        run: cd backend && phpstan analyse app/ --level=0 --no-progress || true

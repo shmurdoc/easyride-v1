@@ -1,0 +1,148 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: easyryde
+      POSTGRES_USER: easyryde
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U easyryde"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - easyryde
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - easyryde
+
+  app:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    environment:
+      APP_NAME: EasyRyde
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY:?APP_KEY not set}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: easyryde
+      DB_USERNAME: easyryde
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: null
+      SESSION_DRIVER: redis
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: redis
+      LOG_CHANNEL: stderr
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+    volumes:
+      - vendor:/var/www/html/vendor
+    user: root
+    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev' && su appuser -c 'composer require laravel/horizon --no-interaction --no-update' && su appuser -c 'composer update laravel/horizon --no-dev' && su appuser -c 'php artisan storage:link || true' && php-fpm -R"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - easyryde
+
+  nginx:
+    build:
+      context: .
+      dockerfile: .docker/nginx/Dockerfile
+    ports:
+      - "${NGINX_PORT:-8000}:80"
+      - "443:443"
+    volumes:
+      - vendor:/var/www/html/vendor
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - easyryde
+
+  socket-server:
+    build:
+      context: .
+      dockerfile: .docker/node/Dockerfile
+    ports:
+      - "${SOCKET_PORT:-3001}:3001"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3001
+      LARAVEL_URL: http://app:8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - easyryde
+
+  horizon:
+    build:
+      context: .
+      dockerfile: .docker/php/Dockerfile
+    user: root
+    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev' && su appuser -c 'composer require laravel/horizon --no-interaction --no-update' && su appuser -c 'composer update laravel/horizon --no-dev' && su appuser -c 'php artisan horizon'"
+    volumes:
+      - vendor:/var/www/html/vendor
+    environment:
+      APP_NAME: EasyRyde
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY:?APP_KEY not set}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: easyryde
+      DB_USERNAME: easyryde
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: null
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      BROADCAST_CONNECTION: redis
+      LOG_CHANNEL: stderr
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - easyryde
+
+networks:
+  easyryde:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  vendor:

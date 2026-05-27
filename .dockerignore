@@ -1,0 +1,19 @@
+# Dependencies
+backend/vendor
+backend/node_modules
+
+# Build artifacts
+.git
+.github
+.idea
+.vscode
+.env
+.env.*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Socket server (Node.js, separate)
+backend/socket-server/node_modules

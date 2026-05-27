@@ -1,0 +1,13 @@
+/.env
+/vendor/
+/node_modules/
+/.composer/
+/temp-test/
+/nginx/
+*.log
+.DS_Store
+.idea/
+.vscode/
+/plan/
+/socket-server/node_modules/
+/socket-server/.env
