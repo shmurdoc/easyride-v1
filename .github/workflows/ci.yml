@@ -36,7 +36,9 @@ jobs:
         run: |
           cd backend
           cp .env.example .env
-          php artisan key:generate --force
+          php -r "echo 'APP_KEY=base64:' . base64_encode(random_bytes(32)) . PHP_EOL;" > .env.tmp
+          grep -v '^APP_KEY=' .env >> .env.tmp
+          mv .env.tmp .env
 
       - name: Install dependencies
         run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
