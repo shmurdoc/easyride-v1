@@ -62,17 +62,34 @@ jobs:
           php vendor/bin/phpunit --no-configuration tests/Unit/ExampleTest.php
           echo "STEP1_EXIT_CODE=$?"
 
-      - name: Step 2 - PHPUnit with phpunit.xml (capture all output)
+      - name: Step 2 - Test Laravel boot manually
         continue-on-error: true
         run: |
           cd backend
-          php vendor/bin/phpunit > /tmp/out.txt 2>&1; rc=$?
-          echo "STEP2_EXIT_CODE=$rc"
-          echo "::group::PHPUnit output"
-          cat /tmp/out.txt
-          echo "::endgroup::"
-          # Show first error lines as annotations
-          grep -m5 -i -E "(error|exception|fatal|could not|class not found|Call to|Undefined|Failed to)" /tmp/out.txt | head -c 2000 | sed 's/^/::error::/'
+          result=$(php -r '
+            require "vendor/autoload.php";
+            $app = require "bootstrap/app.php";
+            $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+            $kernel->bootstrap();
+            echo "APP_NAME: " . config("app.name") . "\n";
+            echo "APP_ENV: " . env("APP_ENV") . "\n";
+            echo "DB_CONN: " . config("database.default") . "\n";
+            echo "KEY_LENGTH: " . strlen(env("APP_KEY")) . "\n";
+          ' 2>&1)
+          rc=$?
+          echo "::warning title=Laravel boot::$result"
+          echo "LARAVEL_BOOT_EXIT=$rc"
+
+      - name: Step 3 - PHPUnit with xml (redirect all output)
+        continue-on-error: true
+        run: |
+          cd backend
+          php vendor/bin/phpunit 2>&1 | head -20 > /tmp/phpunit_output.txt
+          rc=${PIPESTATUS[0]}
+          echo "STEP3_EXIT_CODE=$rc"
+          if [ -s /tmp/phpunit_output.txt ]; then
+            while IFS= read -r line; do echo "::error::${line:0:250}"; done < /tmp/phpunit_output.txt
+          fi
 
   lint:
     runs-on: ubuntu-latest
