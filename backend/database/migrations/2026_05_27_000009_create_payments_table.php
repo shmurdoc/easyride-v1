@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('platform_fee', 10, 2)->default(0.00);
             $table->string('status', 30)->default('pending');
             $table->string('currency', 3)->default('ZAR');
-            $table->jsonb('gateway_response')->nullable();
+            $table->json('gateway_response')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
 

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('region', 100)->nullable();
             $table->string('currency', 3)->default('ZAR');
             $table->boolean('is_active')->default(true);
-            $table->jsonb('settings')->default('{}');
+            $table->json('settings')->default('{}');
             $table->timestamps();
         });
     }
