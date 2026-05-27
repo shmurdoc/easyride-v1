@@ -55,48 +55,24 @@ jobs:
       - name: Run database migrations
         run: cd backend && php artisan migrate --force
 
-      - name: Step 0 - Environment health check
+      - name: Step 1 - PHPUnit basic (no config)
         continue-on-error: true
         run: |
           cd backend
-          echo "::warning::PHP version: $(php -v 2>&1 | head -1)"
-          echo "::warning::PHPUnit version: $(php vendor/bin/phpunit --version 2>&1 | head -1)"
-          echo "::warning::Autoloader exists: $(php -r 'echo file_exists("vendor/autoload.php")?"yes":"no";')"
-          echo "::warning::Autoloader loads: $(php -r 'require "vendor/autoload.php"; echo "ok";' 2>&1)"
-          echo "::warning::Bootstrap loads: $(php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; echo get_class($app);' 2>&1)"
-          echo "::warning::Artisan works: $(php artisan inspire 2>&1 | head -1)"
-          echo "::warning::PHPUnit --version: $(php vendor/bin/phpunit --version 2>&1)"
-          echo "::warning::PHPUnit runs ExampleTest: $(php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php tests/Unit/ExampleTest.php 2>&1 | tail -3)"
+          php vendor/bin/phpunit --no-configuration tests/Unit/ExampleTest.php
+          echo "STEP1_EXIT_CODE=$?"
 
-      - name: Step 1 - PHPUnit basic (no config, single test)
+      - name: Step 2 - PHPUnit with phpunit.xml (capture all output)
         continue-on-error: true
         run: |
           cd backend
-          output=$(php vendor/bin/phpunit --no-configuration tests/Unit/ExampleTest.php 2>&1)
-          rc=$?
-          while IFS= read -r line; do
-            echo "::warning title=PHPUnit basic::${line:0:250}"
-          done <<< "$output"
-          echo "STEP1_EXIT_CODE=$rc"
-
-      - name: Step 2 - PHPUnit with phpunit.xml (capture stderr separately)
-        continue-on-error: true
-        run: |
-          cd backend
-          php vendor/bin/phpunit 1>/tmp/phpunit_stdout.txt 2>/tmp/phpunit_stderr.txt
-          rc=$?
-          echo "::error title=STEP2 exit code::$rc"
-          if [ -s /tmp/phpunit_stdout.txt ]; then
-            while IFS= read -r line; do echo "::warning title=STDOUT::${line:0:250}"; done < /tmp/phpunit_stdout.txt
-          else
-            echo "::warning title=STDOUT::(empty)"
-          fi
-          if [ -s /tmp/phpunit_stderr.txt ]; then
-            while IFS= read -r line; do echo "::error title=STDERR::${line:0:250}"; done < /tmp/phpunit_stderr.txt
-          else
-            echo "::error title=STDERR::(empty)"
-          fi
+          php vendor/bin/phpunit > /tmp/out.txt 2>&1; rc=$?
           echo "STEP2_EXIT_CODE=$rc"
+          echo "::group::PHPUnit output"
+          cat /tmp/out.txt
+          echo "::endgroup::"
+          # Show first error lines as annotations
+          grep -m5 -i -E "(error|exception|fatal|could not|class not found|Call to|Undefined|Failed to)" /tmp/out.txt | head -c 2000 | sed 's/^/::error::/'
 
   lint:
     runs-on: ubuntu-latest
