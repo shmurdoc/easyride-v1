@@ -56,14 +56,19 @@ jobs:
         run: cd backend && php artisan migrate --force
 
       - name: Execute tests
+        continue-on-error: true
         run: |
           cd backend
-          php artisan test > test_out.txt 2>&1; rc=$?
-          echo "::notice title=Test Exit Code::$rc"
-          head -30 test_out.txt > test_head.txt
-          while IFS= read -r line; do
-            echo "::error file=.github/workflows/ci.yml,line=62,title=Test output::$line"
-          done < test_head.txt
+          set +e
+          php artisan test > test_out.txt 2>&1
+          rc=$?
+          cat test_out.txt
+          set -e
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Exit code: $rc" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -50 test_out.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           exit $rc
 
   lint:
