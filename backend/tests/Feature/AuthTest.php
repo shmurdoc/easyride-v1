@@ -14,8 +14,8 @@ class AuthTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Role::create(['name' => 'rider', 'guard' => 'web']);
-        Role::create(['name' => 'driver', 'guard' => 'web']);
+        Role::create(['name' => 'rider', 'guard_name' => 'web']);
+        Role::create(['name' => 'driver', 'guard_name' => 'web']);
     }
 
     public function test_user_can_register(): void
