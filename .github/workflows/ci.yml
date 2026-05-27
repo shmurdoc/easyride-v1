@@ -36,18 +36,7 @@ jobs:
         run: |
           cd backend
           cp .env.example .env
-          php -r "echo 'APP_KEY=' . base64_encode(random_bytes(32)) . PHP_EOL;" > .env.tmp
-          grep -v '^APP_KEY=' .env >> .env.tmp
-          mv .env.tmp .env
-          echo "" >> .env
-          echo "APP_ENV=testing" >> .env
-          echo "DB_CONNECTION=sqlite" >> .env
-          echo "DB_DATABASE=:memory:" >> .env
-          echo "CACHE_STORE=array" >> .env
-          echo "SESSION_DRIVER=array" >> .env
-          echo "QUEUE_CONNECTION=sync" >> .env
-          echo "MAIL_MAILER=array" >> .env
-          echo "BROADCAST_CONNECTION=null" >> .env
+          php artisan key:generate --force
 
       - name: Install dependencies
         run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
@@ -55,41 +44,8 @@ jobs:
       - name: Run database migrations
         run: cd backend && php artisan migrate --force
 
-      - name: Step 1 - PHPUnit basic (no config)
-        continue-on-error: true
-        run: |
-          cd backend
-          php vendor/bin/phpunit --no-configuration tests/Unit/ExampleTest.php
-          echo "STEP1_EXIT_CODE=$?"
-
-      - name: Step 2 - Test Laravel boot manually
-        continue-on-error: true
-        run: |
-          cd backend
-          result=$(php -r '
-            require "vendor/autoload.php";
-            $app = require "bootstrap/app.php";
-            $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-            $kernel->bootstrap();
-            echo "APP_NAME: " . config("app.name") . "\n";
-            echo "APP_ENV: " . env("APP_ENV") . "\n";
-            echo "DB_CONN: " . config("database.default") . "\n";
-            echo "KEY_LENGTH: " . strlen(env("APP_KEY")) . "\n";
-          ' 2>&1)
-          rc=$?
-          echo "::warning title=Laravel boot::$result"
-          echo "LARAVEL_BOOT_EXIT=$rc"
-
-      - name: Step 3 - PHPUnit with xml (redirect all output)
-        continue-on-error: true
-        run: |
-          cd backend
-          php vendor/bin/phpunit 2>&1 | head -20 > /tmp/phpunit_output.txt
-          rc=${PIPESTATUS[0]}
-          echo "STEP3_EXIT_CODE=$rc"
-          if [ -s /tmp/phpunit_output.txt ]; then
-            while IFS= read -r line; do echo "::error::${line:0:250}"; done < /tmp/phpunit_output.txt
-          fi
+      - name: Execute tests
+        run: cd backend && php artisan test
 
   lint:
     runs-on: ubuntu-latest
