@@ -56,7 +56,15 @@ jobs:
         run: cd backend && php artisan migrate --force
 
       - name: Execute tests
-        run: cd backend && php artisan test
+        run: |
+          cd backend
+          php artisan test > test_out.txt 2>&1; rc=$?
+          echo "::notice title=Test Exit Code::$rc"
+          head -30 test_out.txt > test_head.txt
+          while IFS= read -r line; do
+            echo "::error file=.github/workflows/ci.yml,line=62,title=Test output::$line"
+          done < test_head.txt
+          exit $rc
 
   lint:
     runs-on: ubuntu-latest
