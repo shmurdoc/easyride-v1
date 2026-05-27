@@ -55,23 +55,27 @@ jobs:
       - name: Run database migrations
         run: cd backend && php artisan migrate --force
 
-      - name: Try PHPUnit directly (no --no-coverage, removed in PHPUnit 11+)
+      - name: Step 1 - PHPUnit basic (no config, single test)
         continue-on-error: true
         run: |
           cd backend
-          php vendor/bin/phpunit > phpunit_out.txt 2>&1
+          output=$(php vendor/bin/phpunit --no-configuration tests/Unit/ExampleTest.php 2>&1)
           rc=$?
-          head -80 phpunit_out.txt
-          echo "PHPUNIT_EXIT_CODE=$rc"
+          while IFS= read -r line; do
+            echo "::warning title=PHPUnit basic::${line:0:250}"
+          done <<< "$output"
+          echo "STEP1_EXIT_CODE=$rc"
 
-      - name: Try artisan test (with verbose error output)
+      - name: Step 2 - PHPUnit with phpunit.xml
         continue-on-error: true
         run: |
           cd backend
-          php artisan test -v > artisan_out.txt 2>&1
+          output=$(php vendor/bin/phpunit 2>&1)
           rc=$?
-          head -80 artisan_out.txt
-          echo "ARTISAN_EXIT_CODE=$rc"
+          while IFS= read -r line; do
+            echo "::warning title=PHPUnit full cfg::${line:0:250}"
+          done <<< "$output"
+          echo "STEP2_EXIT_CODE=$rc"
 
   lint:
     runs-on: ubuntu-latest
