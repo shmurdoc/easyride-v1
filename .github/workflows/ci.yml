@@ -55,22 +55,20 @@ jobs:
       - name: Run database migrations
         run: cd backend && php artisan migrate --force
 
-      - name: Run diagnostics
-        run: |
-          cd backend
-          php -r "echo 'PHP version: ' . PHP_VERSION . PHP_EOL;"
-          php -r "echo 'APP_KEY test: ' . (str_starts_with(env('APP_KEY', ''), 'base64:') ? 'OK' : 'NO_PREFIX') . PHP_EOL;"
-          php -r "echo 'BCrypt rounds: ' . env('BCRYPT_ROUNDS', 'not-set') . PHP_EOL;"
-          php -r "echo 'DB_CONNECTION: ' . env('DB_CONNECTION', 'not-set') . PHP_EOL;"
-          php -r "echo 'APP_KEY length: ' . strlen(env('APP_KEY', '')) . PHP_EOL;"
-          ls -la vendor/bin/phpunit 2>&1 || echo "PHPUnit binary not found"
-          php vendor/bin/phpunit --version 2>&1 || echo "Cannot run phpunit --version"
-
       - name: Execute tests
         run: |
           cd backend
-          php artisan test 2>&1
-          echo "EXIT_CODE=$?"
+          set +e
+          php artisan test > test_output.txt 2>&1
+          rc=$?
+          set -e
+          echo "Test exit code: $rc"
+          cat test_output.txt
+          echo "### Test Results (exit $rc)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -100 test_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $rc
 
   lint:
     runs-on: ubuntu-latest
