@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
+use App\Models\User;
 use App\Services\DeliveryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,11 +20,10 @@ class DeliveryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $deliveries = Delivery::query()
-            ->when($request->status, fn($q, $v) => $q->where('status', $v))
-            ->when($request->type, fn($q, $v) => $q->where('type', $v))
-            ->when($request->user()->role === 'rider', fn($q) => $q->whereHas('ride', fn($qr) => $qr->where('rider_id', $request->user()->id)))
-            ->when($request->user()->role === 'driver', fn($q) => $q->whereHas('ride', fn($qr) => $qr->where('driver_id', $request->user()->id)))
-            ->with(['ride', 'ride.rider', 'ride.driver'])
+            ->when($request->user()->role === 'driver', fn ($q) => $q->where('driver_id', $request->user()->id))
+            ->when($request->user()->role === 'rider', fn ($q) => $q->where('sender_id', $request->user()->id))
+            ->when($request->status, fn ($q, $v) => $q->where('status', $v))
+            ->with(['sender', 'driver'])
             ->latest()
             ->paginate($request->per_page ?? 15);
 
@@ -31,47 +33,51 @@ class DeliveryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'ride_id' => 'required|string|exists:rides,id',
-            'type' => 'required|string|in:parcel,food,grocery,other',
-            'description' => 'nullable|string|max:1000',
-            'sender_name' => 'required|string|max:255',
-            'sender_phone' => 'required|string|max:20',
+            'item_description' => 'required|string|max:1000',
+            'item_value' => 'sometimes|numeric|min:0',
             'recipient_name' => 'required|string|max:255',
             'recipient_phone' => 'required|string|max:20',
-            'recipient_address' => 'required|string|max:255',
-            'recipient_latitude' => 'required|numeric',
-            'recipient_longitude' => 'required|numeric',
-            'pickup_notes' => 'nullable|string|max:500',
-            'delivery_notes' => 'nullable|string|max:500',
-            'package_size' => 'nullable|string|in:small,medium,large',
-            'package_weight_kg' => 'nullable|numeric|min:0.1',
-            'estimated_value' => 'nullable|numeric|min:0',
-            'requires_signature' => 'sometimes|boolean',
-            'is_fragile' => 'sometimes|boolean',
+            'pickup_address' => 'required|string|max:500',
+            'pickup_lat' => 'required|numeric|between:-90,90',
+            'pickup_lng' => 'required|numeric|between:-180,180',
+            'dropoff_address' => 'required|string|max:500',
+            'dropoff_lat' => 'required|numeric|between:-90,90',
+            'dropoff_lng' => 'required|numeric|between:-180,180',
+            'payment_method' => 'required|string|in:wallet,cash,payfast,ozow',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
-        $delivery = $this->deliveryService->createDelivery(
-            $request->user(),
-            $validated,
-        );
+        $delivery = $this->deliveryService->createDelivery([
+            'tenant_id' => $request->user()->tenant_id,
+            'sender_id' => $request->user()->id,
+            'status' => 'pending',
+            'payment_method' => $validated['payment_method'],
+            'payment_status' => 'pending',
+            'item_description' => $validated['item_description'],
+            'item_value' => $validated['item_value'] ?? null,
+            'recipient_name' => $validated['recipient_name'],
+            'recipient_phone' => $validated['recipient_phone'],
+            'pickup_address' => $validated['pickup_address'],
+            'pickup_lat' => $validated['pickup_lat'],
+            'pickup_lng' => $validated['pickup_lng'],
+            'dropoff_address' => $validated['dropoff_address'],
+            'dropoff_lat' => $validated['dropoff_lat'],
+            'dropoff_lng' => $validated['dropoff_lng'],
+            'notes' => $validated['notes'] ?? null,
+        ]);
 
-        return response()->json(
-            $delivery->load(['ride', 'ride.rider', 'ride.driver']),
-            201,
-        );
+        return response()->json($delivery, 201);
     }
 
     public function show(Delivery $delivery): JsonResponse
     {
-        return response()->json(
-            $delivery->load(['ride', 'ride.rider', 'ride.driver', 'ride.payment', 'tenant'])
-        );
+        return response()->json($delivery->load(['sender', 'driver', 'ride']));
     }
 
     public function updateStatus(Request $request, Delivery $delivery): JsonResponse
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:pending,picked_up,in_transit,delivered,failed',
+            'status' => 'required|string|in:pending,picked_up,in_transit,delivered,failed,cancelled',
         ]);
 
         $delivery = $this->deliveryService->updateStatus($delivery, $validated['status']);
@@ -79,16 +85,25 @@ class DeliveryController extends Controller
         return response()->json($delivery);
     }
 
-    public function active(Request $request): JsonResponse
+    public function assignDriver(Request $request, Delivery $delivery): JsonResponse
     {
-        $deliveries = Delivery::whereIn('status', ['pending', 'picked_up', 'in_transit'])
-            ->whereHas('ride', function ($q) use ($request) {
-                $q->where('rider_id', $request->user()->id)
-                  ->orWhere('driver_id', $request->user()->id);
-            })
-            ->with(['ride', 'ride.rider', 'ride.driver'])
+        $validated = $request->validate([
+            'driver_id' => 'required|string|exists:users,id',
+        ]);
+
+        $user = User::find($validated['driver_id']);
+        $delivery->update(['driver_id' => $user->id, 'status' => 'pending']);
+
+        return response()->json($delivery->fresh()->load(['sender', 'driver']));
+    }
+
+    public function driverDeliveries(Request $request): JsonResponse
+    {
+        $deliveries = Delivery::where('driver_id', $request->user()->id)
+            ->when($request->status, fn ($q, $v) => $q->where('status', $v))
+            ->with(['sender', 'ride'])
             ->latest()
-            ->get();
+            ->paginate($request->per_page ?? 15);
 
         return response()->json($deliveries);
     }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -17,9 +19,9 @@ class PromoCodeController extends Controller
     public function index(Request $request): JsonResponse
     {
         $promoCodes = PromoCode::query()
-            ->when($request->tenant_id, fn($q, $v) => $q->where('tenant_id', $v))
-            ->when($request->is_active, fn($q, $v) => $q->where('is_active', filter_var($v, FILTER_VALIDATE_BOOLEAN)))
-            ->when($request->search, fn($q, $v) => $q->where('code', 'like', "%{$v}%"))
+            ->when($request->tenant_id, fn ($q, $v) => $q->where('tenant_id', $v))
+            ->when($request->is_active, fn ($q, $v) => $q->where('is_active', filter_var($v, FILTER_VALIDATE_BOOLEAN)))
+            ->when($request->search, fn ($q, $v) => $q->where('code', 'like', "%{$v}%"))
             ->latest()
             ->paginate($request->per_page ?? 15);
 
@@ -79,18 +81,32 @@ class PromoCodeController extends Controller
         return response()->json(null, 204);
     }
 
-    public function validate(Request $request): JsonResponse
+    public function validateCode(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'code' => 'required|string|max:50',
+            'ride_amount' => 'sometimes|numeric|min:0',
         ]);
 
-        $result = $this->promoCodeService->validate($validated['code'], $request->user());
+        try {
+            $promo = $this->promoCodeService->validateCode(
+                $validated['code'],
+                $request->user()->tenant_id,
+                $validated['ride_amount'] ?? null,
+            );
 
-        if (!$result['success']) {
-            return response()->json(['message' => $result['message']], 422);
+            $discount = $this->promoCodeService->applyDiscount($promo, $validated['ride_amount'] ?? 0);
+
+            return response()->json([
+                'valid' => true,
+                'promo_code' => $promo,
+                'discount' => $discount,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'valid' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
-
-        return response()->json($result['data']);
     }
 }

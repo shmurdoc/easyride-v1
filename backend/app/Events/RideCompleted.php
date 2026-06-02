@@ -1,41 +1,53 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Ride;
-use App\Models\Payment;
-use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
 class RideCompleted implements ShouldBroadcast
 {
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
     public function __construct(
         public Ride $ride,
-        public Payment $payment
     ) {}
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('rides.' . $this->ride->id),
+        $channels = [
+            new Channel('ride:' . $this->ride->id),
+            new Channel('admin'),
         ];
+
+        if ($this->ride->rider_id) {
+            $channels[] = new Channel('user:' . $this->ride->rider_id);
+        }
+        if ($this->ride->driver_id) {
+            $channels[] = new Channel('user:' . $this->ride->driver_id);
+        }
+
+        return $channels;
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'ride.completed';
     }
 
     public function broadcastWith(): array
     {
         return [
             'ride_id' => $this->ride->id,
-            'status' => $this->ride->status,
-            'completed_at' => $this->ride->completed_at,
             'total_fare' => $this->ride->total_fare,
-            'distance_km' => $this->ride->distance_km,
-            'duration_minutes' => $this->ride->duration_minutes,
-            'payment' => [
-                'id' => $this->payment->id,
-                'amount' => $this->payment->amount,
-                'status' => $this->payment->status,
-                'payment_method' => $this->payment->payment_method,
-            ],
+            'status' => $this->ride->status,
+            'timestamp' => now()->toISOString(),
         ];
     }
 }

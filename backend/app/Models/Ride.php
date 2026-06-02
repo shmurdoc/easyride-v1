@@ -19,6 +19,7 @@ class Ride extends Model
         'dropoff_latitude', 'dropoff_longitude', 'pickup_address', 'dropoff_address',
         'status', 'category', 'distance_km', 'duration_minutes',
         'base_fare', 'per_km_fare', 'surge_multiplier', 'total_fare',
+        'promo_code_id', 'discount_amount', 'payment_method', 'payment_status',
         'driver_eta', 'started_at', 'completed_at', 'cancelled_at', 'cancelled_by',
     ];
 

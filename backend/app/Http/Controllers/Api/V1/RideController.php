@@ -103,7 +103,7 @@ class RideController extends Controller
         ]);
 
         if ($ride->payment && $ride->payment->status === 'completed') {
-            $this->paymentService->refund($ride->payment, 'Ride cancelled');
+            $this->paymentService->processRefund($ride->payment, 'Ride cancelled');
         }
 
         return response()->json($ride);
@@ -124,10 +124,13 @@ class RideController extends Controller
             'comment' => 'nullable|string|max:1000',
         ]);
 
+        $rater = \App\Models\User::find($request->user()->id);
+        $ratee = \App\Models\User::find($ride->driver_id);
+
         $rating = $this->ratingService->rateRide(
             $ride,
-            $request->user()->id,
-            $ride->driver_id,
+            $rater,
+            $ratee,
             $validated['score'],
             $validated['comment'] ?? null,
         );
@@ -147,13 +150,28 @@ class RideController extends Controller
 
         $validated = $request->validate(['code' => 'required|string']);
 
-        $result = $this->promoCodeService->apply($ride, $validated['code']);
+        try {
+            $promo = $this->promoCodeService->validateCode(
+                $validated['code'],
+                $request->user()->tenant_id,
+                null,
+            );
 
-        if (!$result['success']) {
-            return response()->json(['message' => $result['message']], 422);
+            $discount = $this->promoCodeService->applyDiscount($promo, (float) $ride->total_fare);
+
+            $ride->update([
+                'promo_code_id' => $promo->id,
+                'discount_amount' => $discount['discount'],
+            ]);
+
+            return response()->json([
+                'promo_code' => $promo,
+                'discount' => $discount,
+                'new_total' => round((float) $ride->total_fare - $discount['discount'], 2),
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        return response()->json($result['data']);
     }
 
     public function driverAccept(Request $request, Ride $ride): JsonResponse

@@ -15,7 +15,7 @@ class Wallet extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'user_id', 'balance', 'pending_balance', 'currency',
+        'user_id', 'tenant_id', 'balance', 'pending_balance', 'currency',
     ];
 
     protected function casts(): array

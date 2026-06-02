@@ -2,271 +2,201 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { createAdapter } = require('@socket.io/redis-adapter');
-const Redis = require('ioredis');
-const jwt = require('jsonwebtoken');
 
-const REDIS_HOST = process.env.REDIS_HOST || 'redis';
-const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379');
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:8000';
-const JWT_SECRET = process.env.JWT_SECRET || 'easyryde-jwt-secret';
-const PORT = parseInt(process.env.PORT || '3001');
+const config = require('./config');
+const { pubClient, subClient } = require('./services/redis');
+const geoService = require('./services/geo');
+const laravelRelay = require('./services/laravel');
+const authService = require('./services/auth');
+const rateLimit = require('./middleware/rateLimit');
 
-const STALE_LOCATION_TTL = 300;
+const registerDriverHandlers = require('./handlers/driver');
+const registerRideHandlers = require('./handlers/ride');
+const registerChatHandlers = require('./handlers/chat');
+const registerDeliveryHandlers = require('./handlers/delivery');
+const registerAdminHandlers = require('./handlers/admin');
+const registerFoodOrderHandlers = require('./handlers/foodOrder');
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
-  cors: { origin: CLIENT_URL, methods: ['GET', 'POST'] }
+  cors: {
+    origin: config.clientUrl,
+    methods: ['GET', 'POST'],
+  },
+  pingInterval: 25000,
+  pingTimeout: 20000,
+  maxHttpBufferSize: 1e6,
+  connectTimeout: 10000,
 });
 
-const redisPub = new Redis({ host: REDIS_HOST, port: REDIS_PORT });
-const redisSub = new Redis({ host: REDIS_HOST, port: REDIS_PORT });
-const redisClient = new Redis({ host: REDIS_HOST, port: REDIS_PORT });
+let connectionCount = 0;
 
-redisPub.on('error', (err) => console.error('Redis pub error:', err.message));
-redisSub.on('error', (err) => console.error('Redis sub error:', err.message));
-redisClient.on('error', (err) => console.error('Redis client error:', err.message));
+io.adapter(createAdapter(pubClient, subClient));
 
-io.adapter(createAdapter(redisPub, redisSub));
+laravelRelay.init(io);
 
-redisSub.psubscribe('laravel_database_*', (err) => {
-  if (err) console.error('Redis psubscribe error:', err.message);
-});
-
-redisSub.on('pmessage', (_pattern, channel, message) => {
-  try {
-    const parsed = JSON.parse(message);
-    const eventName = parsed.event || null;
-    const eventData = parsed.data || {};
-
-    let room = null;
-    if (channel.includes('user:')) {
-      const match = channel.match(/user:(\d+)/);
-      if (match) room = `user:${match[1]}`;
-    } else if (channel.includes('driver:')) {
-      const match = channel.match(/driver:(\d+)/);
-      if (match) room = `driver:${match[1]}`;
-    } else if (channel.includes('admin')) {
-      room = 'admin';
-    } else if (channel.includes('ride:')) {
-      const match = channel.match(/ride:(\d+)/);
-      if (match) room = `ride:${match[1]}`;
-    } else if (channel.includes('delivery:')) {
-      const match = channel.match(/delivery:(\d+)/);
-      if (match) room = `delivery:${match[1]}`;
-    }
-
-    if (room && eventName) {
-      io.to(room).emit(eventName, eventData);
-    }
-  } catch (err) {
-    console.error('Error processing Laravel broadcast:', err.message);
-  }
-});
-
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-  if (!token) return next(new Error('Authentication required'));
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    socket.data.userId = decoded.user_id || decoded.sub || decoded.id;
-    socket.data.role = decoded.role || 'rider';
-    socket.data.tenantId = decoded.tenant_id || null;
+    const result = await authService.validateToken(token);
+    if (!result.valid) {
+      const msg = {
+        malformed: 'Invalid token format',
+        not_sanctum: 'Token is not a Sanctum token',
+        cached_invalid: 'Token previously rejected',
+        unauthorized: 'Token unauthorized',
+        expired: 'Token expired',
+        timeout: 'Auth backend timeout',
+        network_error: 'Auth backend unreachable',
+        no_user: 'Token has no associated user',
+      }[result.reason] || 'Invalid token';
+      return next(new Error(msg));
+    }
+
+    const u = result.user;
+    socket.data.userId = u.userId;
+    socket.data.role = u.role;
+    socket.data.tenantId = u.tenantId;
+    socket.data.userName = u.name;
+    socket.data.userEmail = u.email;
+    socket.data.token = token;
+    socket.data.authFromCache = !!result.fromCache;
+
     next();
-  } catch {
-    next(new Error('Invalid token'));
+  } catch (err) {
+    console.error('[Auth] unexpected error:', err);
+    next(new Error('Authentication failed'));
   }
 });
 
 io.on('connection', (socket) => {
+  connectionCount++;
   const { userId, role, tenantId } = socket.data;
-  console.log(`User connected: ${userId} (${role})`);
+
+  socket.use((packet, next) => rateLimit(socket, packet[0], next));
+
+
+  console.log(`[Connect] User ${userId} (${role}) connected. Total: ${connectionCount}`);
 
   socket.join(`user:${userId}`);
 
   if (role === 'driver') {
     socket.join(`driver:${userId}`);
+    socket.data.isOnline = false;
   }
 
-  if (role === 'admin') {
+  if (role === 'admin' || role === 'super-admin') {
     socket.join('admin');
   }
 
-  socket.on('driver:location-update', async (data) => {
-    try {
-      const { rideId, latitude, longitude } = data;
-      if (rideId) {
-        socket.to(`ride:${rideId}`).emit('driver:location', { driverId: userId, latitude, longitude });
-      }
-      await redisClient.hset(
-        `driver:location:${userId}`,
-        'latitude', latitude,
-        'longitude', longitude,
-        'updatedAt', Date.now().toString()
-      );
-      await redisClient.expire(`driver:location:${userId}`, STALE_LOCATION_TTL);
-    } catch (err) {
-      console.error('driver:location-update error:', err.message);
-      socket.emit('error', { message: 'Failed to update location' });
-    }
+  registerDriverHandlers(socket, io);
+  registerRideHandlers(socket, io);
+  registerChatHandlers(socket, io);
+  registerDeliveryHandlers(socket, io);
+  registerAdminHandlers(socket, io);
+  registerFoodOrderHandlers(socket, io);
+
+  socket.on('error', (err) => {
+    console.error(`[Error] User ${userId}:`, err.message);
   });
 
-  socket.on('rider:book-ride', async (data) => {
-    try {
-      const { pickup, destination, rideType, rideId } = data;
-      const ioRef = io;
-      const driverKeys = await redisClient.keys('driver:location:*');
-      const driverIds = driverKeys.map((k) => k.replace('driver:location:', ''));
-      for (const driverId of driverIds) {
-        ioRef.to(`driver:${driverId}`).emit('ride:request', {
-          rideId,
-          pickup,
-          destination,
-          rideType,
-          riderId: userId
-        });
-      }
-    } catch (err) {
-      console.error('rider:book-ride error:', err.message);
-      socket.emit('error', { message: 'Failed to broadcast ride request' });
-    }
-  });
-
-  socket.on('driver:accept-ride', async (data) => {
-    try {
-      const { rideId, riderId } = data;
-      socket.join(`ride:${rideId}`);
-      io.to(`user:${riderId}`).emit('ride:accepted', { rideId, driverId: userId });
-    } catch (err) {
-      console.error('driver:accept-ride error:', err.message);
-      socket.emit('error', { message: 'Failed to accept ride' });
-    }
-  });
-
-  socket.on('driver:arrived', async (data) => {
-    try {
-      const { rideId, riderId } = data;
-      io.to(`user:${riderId}`).emit('ride:arrived', { rideId, driverId: userId });
-    } catch (err) {
-      console.error('driver:arrived error:', err.message);
-      socket.emit('error', { message: 'Failed to notify arrival' });
-    }
-  });
-
-  socket.on('rider:ride-start', async (data) => {
-    try {
-      const { rideId, driverId } = data;
-      io.to(`driver:${driverId}`).emit('ride:started', { rideId, riderId: userId });
-    } catch (err) {
-      console.error('rider:ride-start error:', err.message);
-      socket.emit('error', { message: 'Failed to start ride' });
-    }
-  });
-
-  socket.on('driver:ride-complete', async (data) => {
-    try {
-      const { rideId, riderId } = data;
-      io.to(`user:${riderId}`).emit('ride:completed', { rideId, driverId: userId });
-    } catch (err) {
-      console.error('driver:ride-complete error:', err.message);
-      socket.emit('error', { message: 'Failed to complete ride' });
-    }
-  });
-
-  socket.on('rider:cancel-ride', async (data) => {
-    try {
-      const { rideId, driverId } = data;
-      io.to(`driver:${driverId}`).emit('ride:cancelled', { rideId, riderId: userId, reason: data.reason || '' });
-    } catch (err) {
-      console.error('rider:cancel-ride error:', err.message);
-      socket.emit('error', { message: 'Failed to cancel ride' });
-    }
-  });
-
-  socket.on('chat:send', async (data) => {
-    try {
-      const { rideId, message, receiverId } = data;
-      const msg = { rideId, senderId: userId, receiverId, message, timestamp: new Date().toISOString() };
-      await redisClient.lpush(`chat:${rideId}`, JSON.stringify(msg));
-      await redisClient.ltrim(`chat:${rideId}`, 0, 49);
-      io.to(`ride:${rideId}`).emit('chat:message', msg);
-    } catch (err) {
-      console.error('chat:send error:', err.message);
-      socket.emit('error', { message: 'Failed to send message' });
-    }
-  });
-
-  socket.on('rider:request-delivery', async (data) => {
-    try {
-      const { deliveryId, pickup, destination, description } = data;
-      const driverKeys = await redisClient.keys('driver:location:*');
-      const driverIds = driverKeys.map((k) => k.replace('driver:location:', ''));
-      for (const driverId of driverIds) {
-        io.to(`driver:${driverId}`).emit('delivery:request', {
-          deliveryId,
-          pickup,
-          destination,
-          description,
-          riderId: userId
-        });
-      }
-    } catch (err) {
-      console.error('rider:request-delivery error:', err.message);
-      socket.emit('error', { message: 'Failed to request delivery' });
-    }
-  });
-
-  socket.on('driver:delivery-status', async (data) => {
-    try {
-      const { deliveryId, riderId, status } = data;
-      io.to(`user:${riderId}`).emit('delivery:status', { deliveryId, status, driverId: userId });
-    } catch (err) {
-      console.error('driver:delivery-status error:', err.message);
-      socket.emit('error', { message: 'Failed to update delivery status' });
-    }
-  });
-
-  socket.on('join:ride', async (rideId) => {
-    try {
-      socket.join(`ride:${rideId}`);
-      const messages = await redisClient.lrange(`chat:${rideId}`, 0, 49);
-      const parsed = messages.map((m) => JSON.parse(m)).reverse();
-      socket.emit('chat:history', { rideId, messages: parsed });
-    } catch (err) {
-      console.error('join:ride error:', err.message);
-    }
-  });
-
-  socket.on('leave:ride', (rideId) => {
-    socket.leave(`ride:${rideId}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`User disconnected: ${userId}`);
+  socket.on('disconnect', (reason) => {
+    connectionCount--;
+    console.log(`[Disconnect] User ${userId} (${role}). Reason: ${reason}. Total: ${connectionCount}`);
   });
 });
 
-setInterval(async () => {
+if (config.health.enabled) {
+  app.get(config.health.path, async (_req, res) => {
+    try {
+      const onlineDrivers = await geoService.getOnlineDriverCount();
+      res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        connections: connectionCount,
+        onlineDrivers,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      res.status(503).json({
+        status: 'error',
+        message: err.message,
+      });
+    }
+  });
+
+  app.get('/metrics', async (_req, res) => {
+    try {
+      const onlineDrivers = await geoService.getOnlineDriverCount();
+      res.json({
+        connections: connectionCount,
+        onlineDrivers,
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        pid: process.pid,
+      });
+    } catch (err) {
+      res.status(503).json({ error: err.message });
+    }
+  });
+}
+
+const cleanupInterval = setInterval(async () => {
   try {
-    const keys = await redisClient.keys('driver:location:*');
-    const now = Date.now();
-    for (const key of keys) {
-      try {
-        const data = await redisClient.hgetall(key);
-        if (data.updatedAt && (now - parseInt(data.updatedAt)) / 1000 > STALE_LOCATION_TTL) {
-          await redisClient.del(key);
-        }
-      } catch (err) {
-        console.error('Cleanup error for key', key, err.message);
-      }
+    const cleaned = await geoService.cleanupStaleLocations();
+    if (cleaned > 0) {
+      console.log(`[Cleanup] Removed ${cleaned} stale driver locations`);
     }
   } catch (err) {
-    console.error('Periodic location cleanup error:', err.message);
+    console.error('[Cleanup] Error:', err.message);
   }
-}, 300000);
+}, config.location.cleanupIntervalMs);
 
-server.listen(PORT, () => {
-  console.log(`Socket server running on port ${PORT}`);
+function gracefulShutdown(signal) {
+  console.log(`[Shutdown] Received ${signal}. Shutting down gracefully...`);
+
+  clearInterval(cleanupInterval);
+
+  io.emit('server:shutdown', { message: 'Server is restarting. Please reconnect.' });
+
+  io.close(() => {
+    console.log('[Shutdown] Socket.io closed');
+    pubClient.quit().catch(() => {});
+    subClient.quit().catch(() => {});
+    server.close(() => {
+      console.log('[Shutdown] HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  setTimeout(() => {
+    console.error('[Shutdown] Forced exit after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled rejection:', reason);
+});
+
+server.listen(config.port, () => {
+  console.log(`[Server] EasyRyde Socket server running on port ${config.port}`);
+  console.log(`[Server] Health check: ${config.health.path}`);
+  console.log(`[Server] Metrics: /metrics`);
 });
 
 module.exports = { server, io };

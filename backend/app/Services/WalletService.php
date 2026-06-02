@@ -15,7 +15,7 @@ class WalletService
     {
         return Wallet::firstOrCreate(
             ['user_id' => $user->id],
-            ['balance' => 0.0, 'pending_balance' => 0.0, 'currency' => $currency],
+            ['tenant_id' => $user->tenant_id, 'balance' => 0.0, 'pending_balance' => 0.0, 'currency' => $currency],
         );
     }
 

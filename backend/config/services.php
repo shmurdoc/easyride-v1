@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    'payfast' => [
+        'merchant_id' => env('PAYFAST_MERCHANT_ID', '10000100'),
+        'merchant_key' => env('PAYFAST_MERCHANT_KEY', '46f0cd694581a'),
+        'passphrase' => env('PAYFAST_PASSPHRASE', ''),
+        'sandbox' => env('PAYFAST_SANDBOX', true),
+        'return_url' => env('PAYFAST_RETURN_URL', 'https://easyryde.co.za/payments/payfast/return'),
+        'cancel_url' => env('PAYFAST_CANCEL_URL', 'https://easyryde.co.za/payments/payfast/cancel'),
+        'notify_url' => env('PAYFAST_NOTIFY_URL', 'https://easyryde.co.za/api/v1/payments/payfast/webhook'),
+    ],
+
+    'ozow' => [
+        'site_code' => env('OZOW_SITE_CODE', ''),
+        'api_key' => env('OZOW_API_KEY', ''),
+        'private_key' => env('OZOW_PRIVATE_KEY', ''),
+        'sandbox' => env('OZOW_SANDBOX', true),
+        'notify_url' => env('OZOW_NOTIFY_URL', 'https://easyryde.co.za/api/v1/payments/ozow/webhook'),
+        'return_url' => env('OZOW_RETURN_URL', 'https://easyryde.co.za/payments/ozow/return'),
+        'cancel_url' => env('OZOW_CANCEL_URL', 'https://easyryde.co.za/payments/ozow/cancel'),
+    ],
+
 ];

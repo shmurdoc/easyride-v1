@@ -1,0 +1,119 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html, body, #root {
+    @apply h-full;
+  }
+  body {
+    @apply text-ink-900 antialiased font-sans bg-ink-50;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    @apply bg-primary-500/20 text-primary-900;
+  }
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500/40 ring-offset-2 ring-offset-white rounded-md;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 ease-spring
+           disabled:opacity-50 disabled:cursor-not-allowed select-none;
+  }
+  .btn-sm { @apply px-3 py-1.5 text-sm; }
+  .btn-md { @apply px-4 py-2 text-sm; }
+  .btn-lg { @apply px-5 py-2.5 text-base; }
+  .btn-xl { @apply px-6 py-3 text-base; }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white shadow-glow-primary
+           hover:bg-primary-700 hover:shadow-pop hover:-translate-y-px active:translate-y-0 active:shadow-sm;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-ink-700 border border-ink-200
+           hover:bg-ink-50 hover:border-ink-300 hover:-translate-y-px active:translate-y-0;
+  }
+  .btn-ghost {
+    @apply btn text-ink-700 hover:bg-ink-100;
+  }
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-700 shadow-sm;
+  }
+  .btn-accent {
+    @apply btn bg-accent-600 text-white shadow-glow-accent hover:bg-accent-700;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-card border border-ink-100/80;
+  }
+  .card-hover {
+    @apply card transition-all duration-200 ease-spring hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+  .card-flat {
+    @apply bg-white rounded-2xl border border-ink-100;
+  }
+  .card-glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-card rounded-2xl;
+  }
+
+  .input {
+    @apply w-full bg-white border border-ink-200 rounded-lg px-3.5 py-2.5 text-sm text-ink-900 placeholder-ink-400
+           transition-all duration-150
+           focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 focus:outline-none
+           disabled:bg-ink-50 disabled:text-ink-500;
+  }
+  .input-lg {
+    @apply input px-4 py-3 text-base;
+  }
+  .input-search {
+    @apply input pl-10;
+  }
+
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-ink-500 mb-1.5;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-success { @apply badge bg-accent-50 text-accent-700 border border-accent-200; }
+  .badge-warn    { @apply badge bg-warn-50 text-warn-700 border border-warn-200; }
+  .badge-danger  { @apply badge bg-danger-50 text-danger-700 border border-danger-200; }
+  .badge-info    { @apply badge bg-primary-50 text-primary-700 border border-primary-200; }
+  .badge-neutral { @apply badge bg-ink-100 text-ink-700 border border-ink-200; }
+
+  .skeleton {
+    @apply bg-gradient-to-r from-ink-100 via-ink-50 to-ink-100 bg-[length:1000px_100%] animate-shimmer rounded-md;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center text-center py-16 px-6;
+  }
+  .empty-state-icon {
+    @apply w-16 h-16 rounded-2xl bg-ink-100 text-ink-400 flex items-center justify-center mb-4;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+  .bg-mesh-cool { background-image: var(--tw-gradient-stops, ); }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.ink.300') transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar { @apply w-1.5 h-1.5; }
+  .scrollbar-thin::-webkit-scrollbar-track { @apply bg-transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-ink-300 rounded-full; }
+}

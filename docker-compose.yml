@@ -61,7 +61,7 @@ services:
     volumes:
       - vendor:/var/www/html/vendor
     user: root
-    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev' && su appuser -c 'composer require laravel/horizon --no-interaction --no-update' && su appuser -c 'composer update laravel/horizon --no-dev' && su appuser -c 'php artisan storage:link || true' && php-fpm -R"
+    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'php artisan storage:link || true' && php-fpm -R"
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,7 +77,8 @@ services:
       dockerfile: .docker/nginx/Dockerfile
     ports:
       - "${NGINX_PORT:-8000}:80"
-      - "443:443"
+      - "${NGINX_SSL_PORT:-8443}:443"
+      - "${NGINX_HTTP_PORT:-8080}:8080"
     volumes:
       - vendor:/var/www/html/vendor
     depends_on:
@@ -88,19 +89,36 @@ services:
 
   socket-server:
     build:
-      context: .
-      dockerfile: .docker/node/Dockerfile
+      context: ./socket-server
+      dockerfile: Dockerfile
     ports:
-      - "${SOCKET_PORT:-3001}:3001"
+      - "${SOCKET_PORT:-13099}:3001"
     environment:
+      PORT: 3001
+      CLIENT_URL: ${APP_URL:-http://localhost:8000}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET not set}
+      APP_API_BASE_URL: ${SOCKET_API_BASE_URL:-http://nginx:8080}
+      APP_API_TOKEN: ${SOCKET_SERVICE_TOKEN:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      PORT: 3001
-      LARAVEL_URL: http://app:8000
+      REDIS_PASSWORD:
+      REDIS_DB: 0
+      STALE_LOCATION_TTL: 300
+      CLEANUP_INTERVAL_MS: 60000
+      DRIVER_RADIUS_KM: 10
+      RATE_LIMIT_WINDOW_MS: 60000
+      RATE_LIMIT_MAX: 60
+      HEALTH_CHECK_ENABLED: "true"
+      HEALTH_CHECK_PATH: /health
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     networks:
       - easyryde
 
@@ -109,7 +127,7 @@ services:
       context: .
       dockerfile: .docker/php/Dockerfile
     user: root
-    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev' && su appuser -c 'composer require laravel/horizon --no-interaction --no-update' && su appuser -c 'composer update laravel/horizon --no-dev' && su appuser -c 'php artisan horizon'"
+    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'php artisan config:clear' && su appuser -c 'php artisan horizon'"
     volumes:
       - vendor:/var/www/html/vendor
     environment:

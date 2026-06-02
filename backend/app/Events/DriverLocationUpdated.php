@@ -1,30 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
-use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
 
 class DriverLocationUpdated implements ShouldBroadcast
 {
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
     public function __construct(
         public string $driverId,
         public float $latitude,
         public float $longitude,
-        public ?string $rideId = null
+        public ?string $rideId = null,
     ) {}
 
     public function broadcastOn(): array
     {
         $channels = [
-            new PrivateChannel('drivers.' . $this->driverId . '.tracking'),
+            new Channel('driver:' . $this->driverId),
         ];
 
         if ($this->rideId !== null) {
-            $channels[] = new PrivateChannel('rides.' . $this->rideId);
+            $channels[] = new Channel('ride:' . $this->rideId);
         }
 
         return $channels;
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'driver.location';
     }
 
     public function broadcastWith(): array
@@ -34,6 +46,7 @@ class DriverLocationUpdated implements ShouldBroadcast
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'ride_id' => $this->rideId,
+            'timestamp' => now()->toISOString(),
         ];
     }
 }

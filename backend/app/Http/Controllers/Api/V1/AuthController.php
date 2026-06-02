@@ -73,6 +73,36 @@ class AuthController extends Controller
         );
     }
 
+    public function createDriver(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'phone_number' => 'required|string|max:20|unique:users,phone_number',
+            'password' => 'required|min:8|confirmed',
+            'tenant_id' => 'sometimes|string|exists:tenants,id',
+        ]);
+
+        $tenantId = $validated['tenant_id'] ?? $request->user()->tenant_id;
+
+        $user = User::create([
+            'tenant_id' => $tenantId,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+            'phone_number' => $validated['phone_number'],
+            'role' => 'driver',
+            'is_active' => true,
+        ]);
+
+        $user->assignRole('driver');
+
+        return response()->json([
+            'user' => $user,
+            'message' => 'Driver account created successfully.',
+        ], 201);
+    }
+
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate(['email' => 'required|email']);

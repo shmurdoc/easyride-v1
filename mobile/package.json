@@ -1,0 +1,19 @@
+{
+  "name": "easyryde-mobile",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "rider": "cd apps/rider && npx expo start",
+    "driver": "cd apps/driver && npx expo start",
+    "admin": "cd apps/admin && npx expo start",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,33 +1,41 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Events;
 
 use App\Models\Ride;
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 class NewRideRequest implements ShouldBroadcast
 {
-    use Dispatchable, SerializesModels;
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
     public function __construct(
         public Ride $ride,
-        public array $nearbyDriverIds = []
+        public array $nearbyDriverIds = [],
     ) {}
 
     public function broadcastOn(): array
     {
         $channels = [
-            new PrivateChannel('rides.' . $this->ride->id),
+            new Channel('ride:' . $this->ride->id),
         ];
 
         foreach ($this->nearbyDriverIds as $driverId) {
-            $channels[] = new PrivateChannel('drivers.' . $driverId);
+            $channels[] = new Channel('driver:' . $driverId);
         }
 
         return $channels;
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'ride.request';
     }
 
     public function broadcastWith(): array
@@ -41,6 +49,7 @@ class NewRideRequest implements ShouldBroadcast
             'category' => $this->ride->category,
             'distance_km' => $this->ride->distance_km,
             'status' => $this->ride->status,
+            'timestamp' => now()->toISOString(),
         ];
     }
 }

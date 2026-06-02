@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -15,12 +17,12 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'phone_number' => 'nullable|string|max:50',
-            'role' => 'nullable|string|in:creator,admin,driver,rider',
-            'tenant_slug' => 'nullable|string|max:255',
-            'tenant_name' => 'nullable|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|min:8|confirmed',
+            'phone_number' => 'required|string|max:20|unique:users,phone_number',
+            'role' => 'sometimes|string|in:rider,driver',
+            'tenant_slug' => 'sometimes|string|max:100',
+            'tenant_name' => 'sometimes|string|max:255',
         ];
     }
 }

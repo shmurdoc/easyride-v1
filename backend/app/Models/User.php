@@ -22,7 +22,8 @@ class User extends Authenticatable
 
     protected $fillable = [
         'tenant_id', 'name', 'email', 'password', 'phone_number',
-        'role', 'is_active', 'is_online', 'email_verified_at',
+        'role', 'is_active', 'is_online', 'is_approved', 'is_kyc_verified',
+        'email_verified_at', 'kyc_verified_at', 'anonymized_at',
         'current_latitude', 'current_longitude',
         'last_location_update', 'current_ride_id',
     ];
@@ -35,9 +36,14 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'kyc_verified_at' => 'datetime',
+            'anonymized_at' => 'datetime',
+            'deleted_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_online' => 'boolean',
+            'is_approved' => 'boolean',
+            'is_kyc_verified' => 'boolean',
             'current_latitude' => 'decimal:7',
             'current_longitude' => 'decimal:7',
             'last_location_update' => 'datetime',
@@ -67,5 +73,30 @@ class User extends Authenticatable
     public function ridesAsDriver(): HasMany
     {
         return $this->hasMany(Ride::class, 'driver_id');
+    }
+
+    public function rides(): HasMany
+    {
+        return $this->hasMany(Ride::class);
+    }
+
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'payer_id');
+    }
+
+    public function consentRecords(): HasMany
+    {
+        return $this->hasMany(ConsentRecord::class);
+    }
+
+    public function kycVerifications(): HasMany
+    {
+        return $this->hasMany(KycVerification::class);
     }
 }

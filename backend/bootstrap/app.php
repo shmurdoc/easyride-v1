@@ -26,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            \App\Http\Middleware\InputSanitizationMiddleware::class,
+            \App\Http\Middleware\ApiRateLimiterMiddleware::class,
         ]);
 
         $middleware->alias([
@@ -33,6 +36,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'tenant' => \App\Http\Middleware\TenantMiddleware::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'driver' => \App\Http\Middleware\DriverMiddleware::class,
+            'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            'rate.limit' => \App\Http\Middleware\ApiRateLimiterMiddleware::class,
+            'sanitize' => \App\Http\Middleware\InputSanitizationMiddleware::class,
         ]);
 
         $middleware->trustProxies(at: '*');
@@ -41,4 +49,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(function (Request $request) {
             return $request->is('api/*') || $request->expectsJson();
         });
-    })->create();
+    })
+    ->withProviders([
+        \App\Providers\PaymentServiceProvider::class,
+        \App\Providers\SentryServiceProvider::class,
+    ])->create();

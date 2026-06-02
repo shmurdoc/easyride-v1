@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -12,8 +14,9 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         $users = User::query()
-            ->when($request->role, fn($q, $role) => $q->where('role', $role))
-            ->when($request->tenant_id, fn($q, $tid) => $q->where('tenant_id', $tid))
+            ->when($request->role, fn ($q, $role) => $q->where('role', $role))
+            ->when($request->tenant_id, fn ($q, $tid) => $q->where('tenant_id', $tid))
+            ->latest()
             ->paginate($request->per_page ?? 15);
 
         return response()->json($users);
@@ -26,13 +29,34 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): JsonResponse
     {
-        $user->update($request->validated());
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $user->id,
+            'phone_number' => 'sometimes|string|max:20|unique:users,phone_number,' . $user->id,
+            'is_active' => 'sometimes|boolean',
+        ]);
+
+        $user->update($validated);
+
         return response()->json($user);
     }
 
     public function destroy(User $user): JsonResponse
     {
         $user->delete();
+
         return response()->json(null, 204);
+    }
+
+    public function adminStats(Request $request): JsonResponse
+    {
+        return response()->json([
+            'total_users' => User::count(),
+            'total_riders' => User::where('role', 'rider')->count(),
+            'total_drivers' => User::where('role', 'driver')->count(),
+            'active_drivers' => User::where('role', 'driver')
+                ->whereHas('driverProfile', fn ($q) => $q->where('is_online', true))
+                ->count(),
+        ]);
     }
 }
