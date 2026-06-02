@@ -24,19 +24,17 @@
 /web/dist/
 /web/node_modules/
 /mobile/node_modules/
-/mobile/apps/*/node_modules/
-/mobile/apps/*/.expo/
-/mobile/apps/*/dist/
-/mobile/apps/*/android/build/
-/mobile/apps/*/ios/build/
-/mobile/apps/*/ios/Pods/
 /admin/node_modules/
 /driver/node_modules/
 /packages/*/node_modules/
-/packages/*/dist/
 /apps/*/node_modules/
 **/node_modules/
 **/.expo/
+
+# Local debug scratch files (use docker cp + run, not git)
+backend/check_admin.php
+backend/debug_*.php
+backend/temp-test/
 *.local
 *.bak
 coverage/

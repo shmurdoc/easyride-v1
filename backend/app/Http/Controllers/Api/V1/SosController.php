@@ -58,7 +58,7 @@ class SosController extends Controller
 
     public function acknowledge(Request $request, string $id): JsonResponse
     {
-        if (!$request->user()->hasRole('admin')) {
+        if (!$request->user()->hasAnyRole(['admin', 'super-admin'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
@@ -73,7 +73,7 @@ class SosController extends Controller
 
     public function resolve(Request $request, string $id): JsonResponse
     {
-        if (!$request->user()->hasRole('admin')) {
+        if (!$request->user()->hasAnyRole(['admin', 'super-admin'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
@@ -92,7 +92,7 @@ class SosController extends Controller
 
     public function active(Request $request): JsonResponse
     {
-        if (!$request->user()->hasRole('admin')) {
+        if (!$request->user()->hasAnyRole(['admin', 'super-admin'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
