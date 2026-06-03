@@ -62,9 +62,9 @@ TESTS = [
     # --- NOTIFICATIONS
     ("rider", "GET", "/api/v1/notifications",          200, None),
     ("rider", "GET", "/api/v1/notifications/unread-count", 200, None),  # literal before {notification}
-    # --- REFERRALS - KNOWN BROKEN HANDLERS (server errors)
-    ("rider", "GET", "/api/v1/referrals/my-code",      500, "Server Error"),
-    ("rider", "GET", "/api/v1/referrals/stats",        500, "Server Error"),
+    # --- REFERRALS - FIXED in W4 (models added)
+    ("rider", "GET", "/api/v1/referrals/my-code",      200, "code"),
+    ("rider", "GET", "/api/v1/referrals/stats",        200, "total_referrals"),
     # --- SOS
     ("admin", "GET", "/api/v1/sos/active",             200, None),  # literal before {id}, admin only
     # --- ADMIN
@@ -87,10 +87,10 @@ TESTS = [
     ("admin", "GET", "/api/v1/admin/compliance/incidents/stats",    200, None),
     ("admin", "GET", "/api/v1/admin/compliance/kyc/pending",        200, None),  # literal before {verification}
     ("admin", "GET", "/api/v1/admin/compliance/data-retention",     200, None),  # literal before {data-retention}
-    # --- REPORTS - KNOWN BROKEN HANDLERS (server errors)
-    ("admin", "GET", "/api/v1/reports/dashboard",      500, "Server Error"),
-    ("admin", "GET", "/api/v1/reports/revenue",        500, "Server Error"),
-    ("admin", "GET", "/api/v1/reports/drivers",        500, "Server Error"),
+    # --- REPORTS - FIXED in W4 (drivers uses DriverProfile.average_rating accessor)
+    ("admin", "GET", "/api/v1/reports/dashboard",      200, "rides"),
+    ("admin", "GET", "/api/v1/reports/revenue",        200, None),  # returns list (empty when no data)
+    ("admin", "GET", "/api/v1/reports/drivers",        200, "avg_rating"),
 ]
 
 

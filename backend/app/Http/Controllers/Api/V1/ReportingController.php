@@ -31,8 +31,8 @@ class ReportingController extends Controller
             'total' => $rides->count(),
             'completed' => (clone $rides)->where('status', 'completed')->count(),
             'cancelled' => (clone $rides)->where('status', 'cancelled')->count(),
-            'revenue' => (float) (clone $rides)->where('status', 'completed')->sum('fare_amount'),
-            'avg_fare' => (float) (clone $rides)->where('status', 'completed')->avg('fare_amount'),
+            'revenue' => (float) (clone $rides)->where('status', 'completed')->sum('total_fare'),
+            'avg_fare' => (float) (clone $rides)->where('status', 'completed')->avg('total_fare'),
             'avg_distance' => (float) (clone $rides)->where('status', 'completed')->avg('distance_km'),
             'avg_duration' => (float) (clone $rides)->where('status', 'completed')->avg('duration_minutes'),
         ];
@@ -45,18 +45,18 @@ class ReportingController extends Controller
         ];
 
         $paymentStats = [
-            'total' => Payment::where('tenant_id', $tenantId)->where('created_at', '>=', $from)->count(),
-            'completed' => Payment::where('tenant_id', $tenantId)
+            'total' => Payment::whereHas('payer', fn ($q) => $q->where('tenant_id', $tenantId))->where('created_at', '>=', $from)->count(),
+            'completed' => Payment::whereHas('payer', fn ($q) => $q->where('tenant_id', $tenantId))
                 ->where('status', 'completed')
                 ->where('created_at', '>=', $from)->count(),
-            'total_amount' => (float) Payment::where('tenant_id', $tenantId)
+            'total_amount' => (float) Payment::whereHas('payer', fn ($q) => $q->where('tenant_id', $tenantId))
                 ->where('status', 'completed')
                 ->where('created_at', '>=', $from)->sum('amount'),
         ];
 
         $walletStats = [
-            'total_deposits' => (float) Wallet::where('tenant_id', $tenantId)->sum('balance'),
-            'total_pending' => (float) Wallet::where('tenant_id', $tenantId)->sum('pending_balance'),
+            'total_deposits' => (float) Wallet::whereHas('user', fn ($q) => $q->where('tenant_id', $tenantId))->sum('balance'),
+            'total_pending' => (float) Wallet::whereHas('user', fn ($q) => $q->where('tenant_id', $tenantId))->sum('pending_balance'),
         ];
 
         $userStats = [
@@ -71,7 +71,7 @@ class ReportingController extends Controller
             ->select(
                 DB::raw("DATE(created_at) as date"),
                 DB::raw("COUNT(*) as rides"),
-                DB::raw("SUM(fare_amount) as revenue"),
+                DB::raw("SUM(total_fare) as revenue"),
             )
             ->groupBy('date')
             ->orderBy('date')
@@ -113,8 +113,8 @@ class ReportingController extends Controller
             ->select(
                 DB::raw("TO_CHAR(created_at, '{$periodFormat}') as period"),
                 DB::raw("COUNT(*) as total_rides"),
-                DB::raw("SUM(fare_amount) as total_revenue"),
-                DB::raw("AVG(fare_amount) as avg_fare"),
+                DB::raw("SUM(total_fare) as total_revenue"),
+                DB::raw("AVG(total_fare) as avg_fare"),
                 DB::raw("SUM(distance_km) as total_distance"),
             )
             ->groupBy('period')
@@ -128,17 +128,16 @@ class ReportingController extends Controller
     {
         $driverStats = User::where('tenant_id', $request->user()->tenant_id)
             ->where('role', 'driver')
-            ->withAvg('rides as avg_rating', function ($q) {
+            ->withCount(['ridesAsDriver as total_rides' => function ($q) {
                 $q->where('status', 'completed');
-            })
-            ->withCount('rides as total_rides')
+            }])
             ->get()
             ->map(fn ($d) => [
                 'id' => $d->id,
                 'name' => $d->name,
                 'email' => $d->email,
                 'is_online' => $d->driverProfile?->is_online ?? false,
-                'avg_rating' => round((float) ($d->avg_rating ?? 0), 2),
+                'avg_rating' => round((float) ($d->driverProfile?->average_rating ?? 0), 2),
                 'total_rides' => $d->total_rides,
             ]);
 
