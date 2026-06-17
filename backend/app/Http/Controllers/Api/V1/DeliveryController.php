@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Delivery\AssignDriverRequest;
+use App\Http\Requests\Api\V1\Delivery\UpdateStatusRequest;
+use App\Http\Requests\Api\V1\StoreDeliveryRequest;
 use App\Models\Delivery;
 use App\Models\User;
 use App\Services\DeliveryService;
@@ -30,28 +33,15 @@ class DeliveryController extends Controller
         return response()->json($deliveries);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreDeliveryRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'item_description' => 'required|string|max:1000',
-            'item_value' => 'sometimes|numeric|min:0',
-            'recipient_name' => 'required|string|max:255',
-            'recipient_phone' => 'required|string|max:20',
-            'pickup_address' => 'required|string|max:500',
-            'pickup_lat' => 'required|numeric|between:-90,90',
-            'pickup_lng' => 'required|numeric|between:-180,180',
-            'dropoff_address' => 'required|string|max:500',
-            'dropoff_lat' => 'required|numeric|between:-90,90',
-            'dropoff_lng' => 'required|numeric|between:-180,180',
-            'payment_method' => 'required|string|in:wallet,cash,payfast,ozow',
-            'notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $delivery = $this->deliveryService->createDelivery([
             'tenant_id' => $request->user()->tenant_id,
             'sender_id' => $request->user()->id,
             'status' => 'pending',
-            'payment_method' => $validated['payment_method'],
+            'payment_method' => $validated['payment_method'] ?? 'wallet',
             'payment_status' => 'pending',
             'item_description' => $validated['item_description'],
             'item_value' => $validated['item_value'] ?? null,
@@ -74,22 +64,18 @@ class DeliveryController extends Controller
         return response()->json($delivery->load(['sender', 'driver', 'ride']));
     }
 
-    public function updateStatus(Request $request, Delivery $delivery): JsonResponse
+    public function updateStatus(UpdateStatusRequest $request, Delivery $delivery): JsonResponse
     {
-        $validated = $request->validate([
-            'status' => 'required|string|in:pending,picked_up,in_transit,delivered,failed,cancelled',
-        ]);
+        $validated = $request->validated();
 
         $delivery = $this->deliveryService->updateStatus($delivery, $validated['status']);
 
         return response()->json($delivery);
     }
 
-    public function assignDriver(Request $request, Delivery $delivery): JsonResponse
+    public function assignDriver(AssignDriverRequest $request, Delivery $delivery): JsonResponse
     {
-        $validated = $request->validate([
-            'driver_id' => 'required|string|exists:users,id',
-        ]);
+        $validated = $request->validated();
 
         $user = User::find($validated['driver_id']);
         $delivery->update(['driver_id' => $user->id, 'status' => 'pending']);

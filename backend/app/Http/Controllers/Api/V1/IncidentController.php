@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Incident\IncidentResolveRequest;
+use App\Http\Requests\Api\V1\Incident\IncidentStoreRequest;
 use App\Models\IncidentReport;
 use App\Services\IncidentReportingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class IncidentController extends Controller
 {
@@ -14,28 +17,19 @@ class IncidentController extends Controller
         private IncidentReportingService $incidentService,
     ) {}
 
-    public function store(Request $request): JsonResponse
+    public function store(IncidentStoreRequest $request): JsonResponse
     {
-        $request->validate([
-            'incident_type' => 'required|string|in:accident,safety_concern,harassment,vehicle_damage,robbery,mechanical_failure,route_deviation,payment_issue,driver_misconduct,rider_misconduct,food_safety,delivery_damage,other',
-            'severity' => 'required|string|in:low,medium,high,critical',
-            'title' => 'required|string|max:255',
-            'description' => 'required|string|max:2000',
-            'ride_id' => 'nullable|integer|exists:rides,id',
-            'delivery_id' => 'nullable|integer|exists:deliveries,id',
-            'evidence' => 'nullable|array|max:5',
-            'evidence.*' => 'file|mimes:jpg,jpeg,png,pdf,mp4|max:10240',
-        ]);
+        $validated = $request->validated();
 
         $incident = $this->incidentService->reportIncident(
             $request->user(),
-            $request->incident_type,
-            $request->severity,
-            $request->title,
-            $request->description,
-            $request->ride_id,
-            $request->delivery_id,
-            $request->file('evidence'),
+            $validated['incident_type'],
+            $validated['severity'],
+            $validated['title'],
+            $validated['description'],
+            $validated['ride_id'] ?? null,
+            null,
+            null,
         );
 
         return response()->json([
@@ -86,13 +80,11 @@ class IncidentController extends Controller
         return response()->json(['message' => 'Incident escalated']);
     }
 
-    public function resolve(Request $request, IncidentReport $incident): JsonResponse
+    public function resolve(IncidentResolveRequest $request, IncidentReport $incident): JsonResponse
     {
-        $request->validate([
-            'resolution' => 'required|string|max:2000',
-        ]);
+        $validated = $request->validated();
 
-        $this->incidentService->resolveIncident($incident, $request->resolution);
+        $this->incidentService->resolveIncident($incident, $validated['resolution']);
 
         return response()->json(['message' => 'Incident resolved']);
     }
@@ -111,7 +103,7 @@ class IncidentController extends Controller
         return response()->json(['stats' => $stats]);
     }
 
-    public function downloadEvidence(IncidentReport $incident, int $index): \Symfony\Component\HttpFoundation\Response
+    public function downloadEvidence(IncidentReport $incident, int $index): Response
     {
         return $this->incidentService->downloadEvidence($incident, $index);
     }

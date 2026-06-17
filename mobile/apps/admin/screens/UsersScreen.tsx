@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
-import { admin } from '@easyryde/shared';
-import { COLORS } from '@easyryde/shared';
+import { FlatList, StyleSheet, TextInput, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { admin, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { Typography } from '@easyryde/shared';
+import { GlassCard } from '@easyryde/shared';
+import { GradientText } from '@easyryde/shared';
+import { Shimmer } from '@easyryde/shared';
 import type { User } from '@easyryde/shared';
 
 export default function UsersScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -17,54 +22,83 @@ export default function UsersScreen() {
       if (search) params.search = search;
       const data = await admin.users(params);
       setUsers(data.data);
-    } catch {} finally { setLoading(false); }
+    } catch (err) { console.warn('Failed to load users:', err); } finally { setLoading(false); setRefreshing(false); }
   }
 
   const handleSearch = () => { setLoading(true); loadUsers(); };
+  const onRefresh = React.useCallback(() => { setRefreshing(true); loadUsers(); }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <Typography variant="h2" style={{ padding: SPACING.base, paddingBottom: SPACING.sm }}>Users</Typography>
+        <View style={{ paddingHorizontal: SPACING.base, marginBottom: SPACING.base }}>
+          <Shimmer height={48} borderRadius={RADIUS.md} />
+        </View>
+        {[1, 2, 3].map((i) => (
+          <GlassCard key={i} style={{ marginHorizontal: SPACING.base, marginBottom: SPACING.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm }}>
+              <Shimmer width={120} height={18} />
+              <Shimmer width={60} height={24} borderRadius={RADIUS.full} />
+            </View>
+            <Shimmer width="70%" height={14} style={{ marginBottom: SPACING.xs }} />
+            <Shimmer width="50%" height={14} />
+          </GlassCard>
+        ))}
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Users</Text>
-      <View style={styles.searchBar}>
-        <TextInput style={styles.searchInput} placeholder="Search users..." value={search} onChangeText={setSearch} onSubmitEditing={handleSearch} />
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <LinearGradient colors={['rgba(212,175,55,0.1)', 'rgba(0,0,0,0)']} style={styles.header}>
+        <Typography variant="h2">Users</Typography>
+      </LinearGradient>
+      <View style={{ paddingHorizontal: SPACING.base, marginBottom: SPACING.base }}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search users..."
+          placeholderTextColor={COLORS.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          onSubmitEditing={handleSearch}
+        />
       </View>
       <FlatList
         data={users}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: SPACING.base }}
+        ListEmptyComponent={<Typography variant="body" color={COLORS.textDim} style={{ textAlign: 'center', marginTop: 40 }}>No users found</Typography>}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.name}>{item.name}</Text>
-              <View style={[styles.badge, item.role === 'driver' ? styles.badgeDriver : styles.badgeRider]}>
-                <Text style={styles.badgeText}>{item.role}</Text>
+          <GlassCard style={{ marginBottom: SPACING.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xs }}>
+              <GradientText colors={GRADIENTS.primary} style={styles.userName}>{item.name}</GradientText>
+              <View style={[styles.badge, { backgroundColor: item.role === 'driver' ? COLORS.successGlow : 'rgba(94,158,255,0.15)' }]}>
+                <Typography variant="xs" color={item.role === 'driver' ? COLORS.success : COLORS.info}>{item.role}</Typography>
               </View>
             </View>
-            <Text style={styles.email}>{item.email}</Text>
-            <Text style={styles.phone}>{item.phone_number}</Text>
-          </View>
+            <Typography variant="small" color={COLORS.textMuted}>{item.email}</Typography>
+            <Typography variant="small" color={COLORS.textDim}>{item.phone_number}</Typography>
+          </GlassCard>
         )}
-        contentContainerStyle={styles.list}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.gray[800], padding: 24, paddingBottom: 8 },
-  searchBar: { paddingHorizontal: 24, marginBottom: 8 },
+  header: { paddingTop: SPACING['2xl'], paddingBottom: SPACING.sm, paddingHorizontal: SPACING.base },
   searchInput: {
-    backgroundColor: COLORS.white, borderRadius: 12, padding: 12, fontSize: 16,
-    borderWidth: 1, borderColor: COLORS.gray[200],
+    backgroundColor: COLORS.glass,
+    borderRadius: RADIUS.md,
+    padding: SPACING.base,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    color: COLORS.text,
   },
-  list: { padding: 24 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 8 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  name: { fontSize: 16, fontWeight: '600', color: COLORS.gray[800] },
-  badge: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 2 },
-  badgeDriver: { backgroundColor: '#10B98120' },
-  badgeRider: { backgroundColor: '#3B82F620' },
-  badgeText: { fontSize: 12, fontWeight: '600', color: COLORS.gray[600] },
-  email: { fontSize: 14, color: COLORS.gray[500] },
-  phone: { fontSize: 13, color: COLORS.gray[400] },
+  userName: { fontSize: 16, fontWeight: '600' },
+  badge: { borderRadius: RADIUS.full, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs },
 });

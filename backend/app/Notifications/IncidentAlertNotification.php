@@ -23,13 +23,13 @@ class IncidentAlertNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Critical Incident Alert - ' . $this->incident->title)
+            ->subject('Critical Incident Alert - '.$this->incident->title)
             ->line('A critical incident has been reported that requires immediate attention.')
-            ->line('Type: ' . $this->incident->incident_type)
-            ->line('Severity: ' . $this->incident->severity)
-            ->line('Title: ' . $this->incident->title)
-            ->line('Description: ' . $this->incident->description)
-            ->action('View Incident', url('/admin/incidents/' . $this->incident->id))
+            ->line('Type: '.$this->incident->incident_type)
+            ->line('Severity: '.$this->incident->severity)
+            ->line('Title: '.$this->incident->title)
+            ->line('Description: '.$this->incident->description)
+            ->action('View Incident', url('/admin/incidents/'.$this->incident->id))
             ->line('Please review and take appropriate action.');
     }
 

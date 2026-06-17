@@ -22,15 +22,15 @@ class FoodOrderStatusUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('food-order:' . $this->order->id),
+            new Channel('food-order:'.$this->order->id),
             new Channel('admin'),
         ];
 
         if ($this->order->customer_id) {
-            $channels[] = new Channel('user:' . $this->order->customer_id);
+            $channels[] = new Channel('user:'.$this->order->customer_id);
         }
         if ($this->order->driver_id) {
-            $channels[] = new Channel('user:' . $this->order->driver_id);
+            $channels[] = new Channel('user:'.$this->order->driver_id);
         }
 
         return $channels;

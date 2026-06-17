@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, ScrollView,
-} from 'react-native';
-import { useAuth } from '@easyryde/shared';
-import { COLORS } from '@easyryde/shared';
+import { TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
+import { View } from 'react-native';
+import { useAuth, COLORS, Typography, Input, Button, useTranslation } from '@easyryde/shared';
+import { SPACING } from '@easyryde/shared';
+import type { RiderAuthNav } from '@easyryde/shared';
 
-export default function RegisterScreen({ navigation }: any) {
+export default function RegisterScreen({ navigation }: { navigation: RiderAuthNav }) {
   const { register } = useAuth();
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,58 +16,33 @@ export default function RegisterScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return;
-    }
-
+    if (!name || !email || !phone || !password || !confirmPassword) { Alert.alert(t('common.error'), t('auth.fillAllFields')); return; }
+    if (password !== confirmPassword) { Alert.alert(t('common.error'), t('auth.passwordsDoNotMatch')); return; }
+    if (password.length < 8) { Alert.alert(t('common.error'), t('auth.passwordMinLength')); return; }
     setLoading(true);
-    try {
-      await register({
-        name,
-        email,
-        phone_number: phone,
-        password,
-        password_confirmation: confirmPassword,
-      });
-    } catch (err: any) {
-      Alert.alert('Registration Failed', err.message || 'Please try again');
-    } finally {
-      setLoading(false);
-    }
+    try { await register({ name, email, phone_number: phone, password, password_confirmation: confirmPassword }); }
+    catch (err: any) { Alert.alert(t('auth.registrationFailed'), err.message || t('auth.pleaseTryAgain')); }
+    finally { setLoading(false); }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join EasyRyde today</Text>
+        <Typography variant="h2" color={COLORS.text} style={{ textAlign: 'center' }}>{t('auth.createAccount')}</Typography>
+        <Typography variant="body" color={COLORS.textMuted} style={{ textAlign: 'center', marginBottom: SPACING.xl }}>{t('app.tagline')}</Typography>
 
-        <TextInput style={styles.input} placeholder="Full Name" value={name} onChangeText={setName} />
-        <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="Phone Number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-        <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
-        <TextInput style={styles.input} placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+        <Input label={t('auth.fullName')} value={name} onChangeText={setName} style={{ marginBottom: SPACING.md }} />
+        <Input label={t('auth.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={{ marginBottom: SPACING.md }} />
+        <Input label={t('auth.phoneNumber')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" style={{ marginBottom: SPACING.md }} />
+        <Input label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry style={{ marginBottom: SPACING.md }} />
+        <Input label={t('auth.confirmPassword')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry style={{ marginBottom: SPACING.lg }} />
 
-        <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleRegister} disabled={loading}>
-          {loading ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.buttonText}>Sign Up</Text>}
-        </TouchableOpacity>
+        <Button title={loading ? t('auth.creatingAccount') : t('auth.signUp')} onPress={handleRegister} disabled={loading} size="lg" style={{ marginBottom: SPACING.base }} />
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.link}>
-            Already have an account? <Text style={styles.linkBold}>Sign In</Text>
-          </Text>
+          <Typography variant="body" color={COLORS.textMuted} style={{ textAlign: 'center' }}>
+            {t('auth.hasAccount')}
+          </Typography>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -75,20 +50,6 @@ export default function RegisterScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.white },
-  inner: { padding: 24, paddingTop: 60 },
-  title: { fontSize: 28, fontWeight: 'bold', color: COLORS.primary, textAlign: 'center' },
-  subtitle: { fontSize: 16, color: COLORS.gray[500], textAlign: 'center', marginBottom: 32 },
-  input: {
-    borderWidth: 1, borderColor: COLORS.gray[200], borderRadius: 12,
-    padding: 16, fontSize: 16, marginBottom: 12, backgroundColor: COLORS.gray[50],
-  },
-  button: {
-    backgroundColor: COLORS.primary, borderRadius: 12, padding: 16,
-    alignItems: 'center', marginTop: 8, marginBottom: 16,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: COLORS.white, fontSize: 18, fontWeight: '600' },
-  link: { textAlign: 'center', color: COLORS.gray[500], fontSize: 14 },
-  linkBold: { color: COLORS.primary, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  inner: { padding: SPACING.lg, paddingTop: 60 },
 });

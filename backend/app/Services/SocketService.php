@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Redis;
 
 class SocketService
@@ -37,7 +38,7 @@ class SocketService
 
     public static function broadcastToAllDrivers(string $event, array $data): void
     {
-        $drivers = \App\Models\User::where('role', 'driver')
+        $drivers = User::where('role', 'driver')
             ->where('is_online', true)
             ->pluck('id');
 
@@ -53,6 +54,6 @@ class SocketService
             'data' => $data,
         ]);
 
-        Redis::publish(self::$prefix . $channel, $payload);
+        Redis::publish(self::$prefix.$channel, $payload);
     }
 }

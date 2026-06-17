@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\InAppNotification;
 use App\Models\PushToken;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -29,7 +29,7 @@ class NotificationTest extends TestCase
         InAppNotification::create([
             'user_id' => $rider->id,
             'title' => 'Ride Completed',
-            'message' => 'Your ride is complete',
+            'body' => 'Your ride is complete',
             'type' => 'ride_completed',
         ]);
 
@@ -48,7 +48,7 @@ class NotificationTest extends TestCase
         InAppNotification::create([
             'user_id' => $rider->id,
             'title' => 'Ride Completed',
-            'message' => 'Your ride is complete',
+            'body' => 'Your ride is complete',
             'type' => 'ride_completed',
             'is_read' => false,
         ]);
@@ -68,7 +68,7 @@ class NotificationTest extends TestCase
         $notification = InAppNotification::create([
             'user_id' => $rider->id,
             'title' => 'Ride Completed',
-            'message' => 'Your ride is complete',
+            'body' => 'Your ride is complete',
             'type' => 'ride_completed',
             'is_read' => false,
         ]);
@@ -90,7 +90,7 @@ class NotificationTest extends TestCase
         InAppNotification::create([
             'user_id' => $rider->id,
             'title' => 'Notification 1',
-            'message' => 'Message 1',
+            'body' => 'Message 1',
             'type' => 'ride_completed',
             'is_read' => false,
         ]);
@@ -98,7 +98,7 @@ class NotificationTest extends TestCase
         InAppNotification::create([
             'user_id' => $rider->id,
             'title' => 'Notification 2',
-            'message' => 'Message 2',
+            'body' => 'Message 2',
             'type' => 'payment_received',
             'is_read' => false,
         ]);
@@ -165,14 +165,14 @@ class NotificationTest extends TestCase
         InAppNotification::create([
             'user_id' => $rider->id,
             'title' => 'My Notification',
-            'message' => 'Mine',
+            'body' => 'Mine',
             'type' => 'ride_completed',
         ]);
 
         InAppNotification::create([
             'user_id' => $otherRider->id,
             'title' => 'Other Notification',
-            'message' => 'Not mine',
+            'body' => 'Not mine',
             'type' => 'ride_completed',
         ]);
 
@@ -198,7 +198,7 @@ class NotificationTest extends TestCase
         InAppNotification::create([
             'user_id' => $driver->id,
             'title' => 'New Ride Request',
-            'message' => 'New ride near you',
+            'body' => 'New ride near you',
             'type' => 'ride_request',
         ]);
 

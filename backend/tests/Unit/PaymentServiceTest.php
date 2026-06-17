@@ -2,12 +2,14 @@
 
 namespace Tests\Unit;
 
+use App\Models\Payment;
+use App\Models\Ride;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Services\PaymentService;
 use App\Services\WalletService;
-use App\Models\User;
-use App\Models\Ride;
-use App\Models\Payment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class PaymentServiceTest extends TestCase
@@ -15,12 +17,19 @@ class PaymentServiceTest extends TestCase
     use RefreshDatabase;
 
     private PaymentService $service;
+
     private WalletService $walletService;
+
+    private Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->walletService = new WalletService();
+        Role::create(['name' => 'rider', 'guard_name' => 'web']);
+        Role::create(['name' => 'driver', 'guard_name' => 'web']);
+        Role::create(['name' => 'admin', 'guard_name' => 'web']);
+        $this->tenant = Tenant::factory()->create();
+        $this->walletService = new WalletService;
         $this->service = new PaymentService($this->walletService);
     }
 
@@ -33,6 +42,7 @@ class PaymentServiceTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'tenant_id' => $this->tenant->id,
             'status' => 'completed',
             'category' => 'standard',
             'pickup_latitude' => -23.9468,
@@ -63,6 +73,7 @@ class PaymentServiceTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'tenant_id' => $this->tenant->id,
             'status' => 'completed',
             'category' => 'standard',
             'pickup_latitude' => -23.9468,
@@ -90,6 +101,7 @@ class PaymentServiceTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'tenant_id' => $this->tenant->id,
             'status' => 'completed',
             'category' => 'standard',
             'pickup_latitude' => -23.9468,

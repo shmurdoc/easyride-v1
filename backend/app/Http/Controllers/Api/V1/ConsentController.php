@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\Api\V1\Consent\ConsentGrantRequest;
+use App\Http\Requests\Api\V1\Consent\ConsentRevokeRequest;
 use App\Services\UserConsentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,15 +22,13 @@ class ConsentController extends Controller
         return response()->json(['consents' => $consents]);
     }
 
-    public function grant(Request $request): JsonResponse
+    public function grant(ConsentGrantRequest $request): JsonResponse
     {
-        $request->validate([
-            'consent_type' => 'required|string|in:terms_of_service,privacy_policy,marketing_email,marketing_sms,location_tracking,data_sharing_partners,biometric_data',
-        ]);
+        $validated = $request->validated();
 
         $consent = $this->consentService->grantConsent(
             $request->user(),
-            $request->consent_type,
+            $validated['consent_type'],
             $request->ip(),
             $request->userAgent(),
         );
@@ -40,13 +39,11 @@ class ConsentController extends Controller
         ]);
     }
 
-    public function revoke(Request $request): JsonResponse
+    public function revoke(ConsentRevokeRequest $request): JsonResponse
     {
-        $request->validate([
-            'consent_type' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
-        $this->consentService->revokeConsent($request->user(), $request->consent_type);
+        $this->consentService->revokeConsent($request->user(), $validated['consent_type']);
 
         return response()->json(['message' => 'Consent revoked']);
     }

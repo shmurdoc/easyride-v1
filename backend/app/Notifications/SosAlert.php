@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Ride;
+use App\Models\User;
 use App\Services\EmailService;
 use App\Services\PushNotificationService;
 use App\Services\SmsService;
@@ -71,7 +72,7 @@ class SosAlert extends Notification implements ShouldQueue
             $location,
         );
 
-        $adminUsers = \App\Models\User::role('admin')->get();
+        $adminUsers = User::role('admin')->get();
         foreach ($adminUsers as $admin) {
             $pushService->sendToDevice($admin, [
                 'title' => 'SOS ALERT',

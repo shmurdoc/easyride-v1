@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 class OzowService
 {
     private const SANDBOX_URL = 'https://api.ozow.com';
+
     private const PRODUCTION_URL = 'https://api.ozow.com';
 
     public function __construct(
@@ -52,10 +53,11 @@ class OzowService
             $response = Http::withHeaders([
                 'ApiKey' => $this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->post($this->getBaseUrl() . '/api/transaction/create', $payload);
+            ])->post($this->getBaseUrl().'/api/transaction/create', $payload);
 
             if ($response->successful()) {
                 $body = $response->json();
+
                 return [
                     'success' => true,
                     'url' => $body['Url'] ?? null,
@@ -71,10 +73,11 @@ class OzowService
 
             return [
                 'success' => false,
-                'error' => 'Payment gateway error: ' . $response->body(),
+                'error' => 'Payment gateway error: '.$response->body(),
             ];
         } catch (\Exception $e) {
             Log::error('Ozow create payment exception', ['error' => $e->getMessage()]);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -101,6 +104,7 @@ class OzowService
                 'expected' => $expectedHash,
                 'received' => $hash,
             ]);
+
             return false;
         }
 
@@ -109,7 +113,8 @@ class OzowService
 
     private function generateHash(string $transactionReference, string $amount, string $siteReference): string
     {
-        $hashString = strtolower($this->siteCode . $this->privateKey . $transactionReference . $amount . $siteReference);
+        $hashString = strtolower($this->siteCode.$this->privateKey.$transactionReference.$amount.$siteReference);
+
         return strtolower(hash('sha512', $hashString));
     }
 
@@ -119,7 +124,8 @@ class OzowService
         string $currencyCode,
         string $status,
     ): string {
-        $hashString = $this->privateKey . $transactionReference . $amount . $currencyCode . $status;
+        $hashString = $this->privateKey.$transactionReference.$amount.$currencyCode.$status;
+
         return strtolower(hash('sha512', $hashString));
     }
 

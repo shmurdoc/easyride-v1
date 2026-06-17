@@ -14,8 +14,7 @@ class RideRequestReceived extends Notification implements ShouldQueue
 
     public function __construct(
         protected Ride $ride
-    )
-    {
+    ) {
         $this->onQueue('horizon');
     }
 

@@ -4,6 +4,4 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-class KycAlreadyApprovedException extends RuntimeException
-{
-}
+class KycAlreadyApprovedException extends RuntimeException {}

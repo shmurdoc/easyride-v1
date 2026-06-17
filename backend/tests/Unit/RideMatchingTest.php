@@ -2,10 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Services\RideMatchingService;
-use App\Models\User;
 use App\Models\Ride;
-use App\Models\Vehicle;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Services\RideMatchingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -16,10 +16,13 @@ class RideMatchingTest extends TestCase
 
     private RideMatchingService $service;
 
+    private Tenant $tenant;
+
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new RideMatchingService();
+        $this->service = new RideMatchingService;
+        $this->tenant = Tenant::factory()->create();
         Role::create(['name' => 'rider', 'guard_name' => 'web']);
         Role::create(['name' => 'driver', 'guard_name' => 'web']);
     }
@@ -38,6 +41,7 @@ class RideMatchingTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'tenant_id' => $this->tenant->id,
             'status' => 'searching',
             'category' => 'standard',
             'pickup_latitude' => -23.9500,
@@ -69,6 +73,7 @@ class RideMatchingTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'tenant_id' => $this->tenant->id,
             'status' => 'accepted',
             'category' => 'standard',
             'pickup_latitude' => -23.9500,
@@ -144,6 +149,7 @@ class RideMatchingTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'tenant_id' => $this->tenant->id,
             'status' => 'searching',
             'category' => 'standard',
             'pickup_latitude' => -23.9500,

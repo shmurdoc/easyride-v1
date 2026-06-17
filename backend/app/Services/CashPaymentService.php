@@ -6,13 +6,14 @@ namespace App\Services;
 
 use App\Models\Payment;
 use App\Models\Ride;
-use App\Models\Wallet;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CashPaymentService
 {
     private const PLATFORM_FEE_PERCENT = 15;
+
     private const RECONCILIATION_GRACE_HOURS = 48;
 
     public function __construct(
@@ -64,7 +65,7 @@ class CashPaymentService
     {
         $payment = $ride->payment;
 
-        if (!$payment || $payment->method !== 'cash') {
+        if (! $payment || $payment->method !== 'cash') {
             return ['success' => false, 'error' => 'Not a cash payment.'];
         }
 
@@ -129,7 +130,7 @@ class CashPaymentService
     {
         try {
             DB::table('cash_reconciliations')->insert([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'id' => (string) Str::uuid(),
                 'payment_id' => $payment->id,
                 'ride_id' => $payment->ride_id,
                 'driver_id' => $payment->payee_id,

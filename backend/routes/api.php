@@ -1,32 +1,32 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\UserController;
-use App\Http\Controllers\Api\V1\PlaceController;
-use App\Http\Controllers\Api\V1\RideController;
-use App\Http\Controllers\Api\V1\DriverController;
-use App\Http\Controllers\Api\V1\PaymentController;
-use App\Http\Controllers\Api\V1\WalletController;
-use App\Http\Controllers\Api\V1\RatingController;
-use App\Http\Controllers\Api\V1\PromoCodeController;
-use App\Http\Controllers\Api\V1\DeliveryController;
 use App\Http\Controllers\Api\V1\AdminController;
-use App\Http\Controllers\Api\V1\ReportingController;
-use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\ScheduledRideController;
-use App\Http\Controllers\Api\V1\ReferralController;
-use App\Http\Controllers\Api\V1\SosController;
+use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
-use App\Http\Controllers\Api\V1\PartnerWebhookController;
 use App\Http\Controllers\Api\V1\ConfigController;
-use App\Http\Controllers\Api\V1\FoodDeliveryController;
-use App\Http\Controllers\Api\V1\FoodAdminController;
-use App\Http\Controllers\Api\V1\HealthCheckController;
 use App\Http\Controllers\Api\V1\ConsentController;
-use App\Http\Controllers\Api\V1\KycController;
-use App\Http\Controllers\Api\V1\IncidentController;
 use App\Http\Controllers\Api\V1\DataRetentionController;
+use App\Http\Controllers\Api\V1\DeliveryController;
+use App\Http\Controllers\Api\V1\DriverController;
+use App\Http\Controllers\Api\V1\FoodAdminController;
+use App\Http\Controllers\Api\V1\FoodDeliveryController;
+use App\Http\Controllers\Api\V1\HealthCheckController;
+use App\Http\Controllers\Api\V1\IncidentController;
+use App\Http\Controllers\Api\V1\KycController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PartnerWebhookController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PlaceController;
+use App\Http\Controllers\Api\V1\PromoCodeController;
+use App\Http\Controllers\Api\V1\RatingController;
+use App\Http\Controllers\Api\V1\ReferralController;
+use App\Http\Controllers\Api\V1\ReportingController;
+use App\Http\Controllers\Api\V1\RideController;
+use App\Http\Controllers\Api\V1\ScheduledRideController;
+use App\Http\Controllers\Api\V1\SosController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WalletController;
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     // Health check endpoint
@@ -37,10 +37,10 @@ Route::prefix('v1')->group(function () {
 
     // Public auth routes
     Route::prefix('auth')->group(function () {
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('login', [AuthController::class, 'login']);
-        Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
-        Route::post('reset-password', [AuthController::class, 'resetPassword']);
+        Route::post('register', [AuthController::class, 'register'])->middleware('throttle:auth-register');
+        Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-password');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth-password');
     });
 
     // Public promo validation
@@ -54,10 +54,13 @@ Route::prefix('v1')->group(function () {
         Route::get('ozow/return', [PaymentController::class, 'ozowReturn']);
         Route::post('partner/order', [PartnerWebhookController::class, 'receiveOrder']);
         Route::post('partner/status', [PartnerWebhookController::class, 'orderStatus']);
+        Route::post('stripe', [PaymentController::class, 'stripeWebhook']);
     });
 
     // Public discovery routes
     Route::get('places/search', [PlaceController::class, 'search']);
+    Route::get('places/reverse', [PlaceController::class, 'reverse']);
+    Route::get('rides/fare-estimate', [RideController::class, 'fareEstimate']);
 
     // Authenticated routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -82,6 +85,7 @@ Route::prefix('v1')->group(function () {
             Route::post('{ride}/start', [RideController::class, 'startRide']);
             Route::post('{ride}/complete', [RideController::class, 'completeRide']);
             Route::post('{ride}/location', [RideController::class, 'updateLocation']);
+            Route::get('{ride}/receipt', [RideController::class, 'receipt']);
         });
 
         // Drivers
@@ -105,6 +109,8 @@ Route::prefix('v1')->group(function () {
             Route::post('rides/{ride}/pay', [PaymentController::class, 'processRidePayment']);
             Route::post('{payment}/refund', [PaymentController::class, 'refund'])->middleware('role:admin|super-admin');
             Route::post('{payment}/dispute', [PaymentController::class, 'dispute']);
+            Route::post('stripe/create-intent', [PaymentController::class, 'createStripeIntent']);
+            Route::post('stripe/confirm', [PaymentController::class, 'confirmStripePayment']);
         });
 
         // Wallet
@@ -156,7 +162,14 @@ Route::prefix('v1')->group(function () {
         // Driver food orders
         Route::prefix('driver/food')->group(function () {
             Route::get('orders', [FoodDeliveryController::class, 'driverOrders']);
+            Route::get('orders/available', [FoodDeliveryController::class, 'availableOrders']);
+            Route::post('orders/{order}/accept', [FoodDeliveryController::class, 'driverAcceptOrder']);
             Route::post('orders/{order}/status', [FoodDeliveryController::class, 'updateStatus']);
+        });
+
+        // Restaurant orders (for restaurant staff)
+        Route::prefix('restaurant/food')->group(function () {
+            Route::get('orders', [FoodDeliveryController::class, 'restaurantOrders']);
         });
 
         // Notifications
@@ -229,7 +242,15 @@ Route::prefix('v1')->group(function () {
                 Route::post('restaurants/{restaurant}/menu-items', [FoodAdminController::class, 'storeMenuItem']);
                 Route::put('menu-items/{item}', [FoodAdminController::class, 'updateMenuItem']);
                 Route::delete('menu-items/{item}', [FoodAdminController::class, 'destroyMenuItem']);
+                Route::get('orders', [FoodAdminController::class, 'orders']);
                 Route::post('food-orders/{order}/assign-driver', [FoodDeliveryController::class, 'assignDriver']);
+            });
+
+            // Payouts
+            Route::prefix('payouts')->group(function () {
+                Route::get('/', [AdminController::class, 'payouts']);
+                Route::get('summary', [AdminController::class, 'payoutSummary']);
+                Route::post('{payout}/retry', [AdminController::class, 'retryPayout']);
             });
 
             // Compliance Admin

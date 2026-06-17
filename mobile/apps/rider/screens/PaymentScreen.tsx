@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { payments, rides } from '@easyryde/shared';
-import { COLORS, formatCurrency, PAYMENT_METHODS } from '@easyryde/shared';
+import { View, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { payments, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { Typography, GlowButton, GlassCard, GradientText } from '@easyryde/shared';
+import type { RiderNav, RiderRoute } from '@easyryde/shared';
 
-export default function PaymentScreen({ route, navigation }: any) {
+export default function PaymentScreen({ route, navigation }: { route: RiderRoute<'Payment'>; navigation: RiderNav }) {
   const { rideId } = route.params;
   const [selectedMethod, setSelectedMethod] = useState('cash');
   const [loading, setLoading] = useState(false);
@@ -12,65 +14,56 @@ export default function PaymentScreen({ route, navigation }: any) {
     setLoading(true);
     try {
       await payments.processRide(rideId, selectedMethod);
-      Alert.alert('Payment Successful', 'Thank you for riding with EasyRyde!', [
-        { text: 'OK', onPress: () => navigation.navigate('Main') },
-      ]);
-    } catch (err: any) {
-      Alert.alert('Payment Failed', err.message || 'Please try again');
-    } finally {
-      setLoading(false);
-    }
+      Alert.alert('Payment Successful', 'Thank you for riding with EasyRyde!', [{ text: 'OK', onPress: () => navigation.navigate('Main') }]);
+    } catch (err: any) { Alert.alert('Payment Failed', err.message || 'Please try again');
+    } finally { setLoading(false); }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Payment</Text>
+    <LinearGradient colors={GRADIENTS.background as unknown as string[]} style={styles.container}>
+      <GradientText
+        colors={GRADIENTS.primary}
+        style={{ fontSize: 26, fontWeight: '700', marginBottom: SPACING.xl }}
+      >
+        Payment
+      </GradientText>
 
-      <View style={styles.methods}>
-        {PAYMENT_METHODS.map((method) => (
-          <TouchableOpacity
-            key={method.id}
-            style={[styles.method, selectedMethod === method.id && styles.methodActive]}
-            onPress={() => setSelectedMethod(method.id)}
-          >
-            <Text style={styles.methodIcon}>{method.icon}</Text>
-            <Text style={[styles.methodName, selectedMethod === method.id && styles.methodNameActive]}>
-              {method.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={{ gap: SPACING.md, marginBottom: SPACING.xl }}>
+        {[{ id: 'cash', name: 'Cash' }, { id: 'wallet', name: 'Wallet' }, { id: 'payfast', name: 'PayFast' }, { id: 'ozow', name: 'Ozow EFT' }].map(({ id, name }) => {
+          const isSelected = selectedMethod === id;
+          return (
+            <TouchableOpacity key={id} onPress={() => setSelectedMethod(id)}>
+              <GlassCard padding={SPACING.base} glow={isSelected}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {isSelected && (
+                    <LinearGradient
+                      colors={GRADIENTS.primary as unknown as string[]}
+                      style={styles.selectionIndicator}
+                    />
+                  )}
+                  <Typography
+                    variant="body"
+                    color={isSelected ? COLORS.primary : COLORS.text}
+                    style={{ fontWeight: isSelected ? '600' : '400', marginLeft: isSelected ? SPACING.sm : 0 }}
+                  >
+                    {name}
+                  </Typography>
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <TouchableOpacity
-        style={[styles.payButton, loading && styles.payButtonDisabled]}
-        onPress={handlePay}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color={COLORS.white} />
-        ) : (
-          <Text style={styles.payButtonText}>Confirm Payment</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+      <GlowButton title={loading ? 'Processing...' : 'Confirm Payment'} onPress={handlePay} disabled={loading} size="lg" />
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.white, padding: 24 },
-  title: { fontSize: 28, fontWeight: 'bold', color: COLORS.gray[800], marginBottom: 32 },
-  methods: { gap: 12, marginBottom: 32 },
-  method: {
-    flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: COLORS.gray[200],
-    borderRadius: 16, padding: 16,
+  container: { flex: 1, padding: SPACING.base },
+  selectionIndicator: {
+    width: 4, height: 24, borderRadius: 2,
+    marginRight: SPACING.sm,
   },
-  methodActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + '10' },
-  methodIcon: { fontSize: 24, marginRight: 12 },
-  methodName: { fontSize: 16, color: COLORS.gray[600] },
-  methodNameActive: { color: COLORS.primary, fontWeight: '600' },
-  payButton: {
-    backgroundColor: COLORS.primary, borderRadius: 16, padding: 18, alignItems: 'center',
-  },
-  payButtonDisabled: { opacity: 0.5 },
-  payButtonText: { color: COLORS.white, fontSize: 18, fontWeight: '600' },
 });

@@ -2,10 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Services\ReferralService;
-use App\Services\WalletService;
 use App\Models\User;
-use App\Models\ReferralCode;
+use App\Services\ReferralService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -19,7 +17,7 @@ class ReferralServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new ReferralService();
+        $this->service = new ReferralService;
         Role::create(['name' => 'rider', 'guard_name' => 'web']);
     }
 

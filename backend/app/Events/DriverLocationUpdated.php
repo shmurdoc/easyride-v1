@@ -24,11 +24,11 @@ class DriverLocationUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('driver:' . $this->driverId),
+            new Channel('driver:'.$this->driverId),
         ];
 
         if ($this->rideId !== null) {
-            $channels[] = new Channel('ride:' . $this->rideId);
+            $channels[] = new Channel('ride:'.$this->rideId);
         }
 
         return $channels;

@@ -30,6 +30,7 @@ export default function RidesScreen() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Ride | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
 
   const loadRides = useCallback(async () => {
     setLoading(true);
@@ -44,6 +45,16 @@ export default function RidesScreen() {
   }, [page, statusFilter, search]);
 
   useEffect(() => { loadRides(); }, [loadRides]);
+
+  const cancelRide = async (id: string) => {
+    if (!cancelReason.trim()) return;
+    try {
+      await client.post(`/admin/rides/${id}/cancel`, { cancellation_reason: cancelReason });
+      setCancelReason('');
+      setSelected(null);
+      loadRides();
+    } catch {}
+  };
 
   const columns = [
     {

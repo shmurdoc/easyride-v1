@@ -1,0 +1,43 @@
+---
+project: "EasyRyde"
+purpose: "Member plan — current task objectives and deliverables"
+member_id: "designer"
+type: "designer"
+ticket: ""
+owner: "UX and product-design decisions Agent"
+status: idle
+lock: false
+priority: medium
+review_required: false
+time_estimate: ""
+time_spent: ""
+context_files: []
+strict_scope: false
+artifact_refs: []
+created_at: "2026-06-09T11:55:21.046Z"
+updated_by: ""
+updated_at: "2026-06-09T11:55:21.046Z"
+---
+
+# Plan — designer (designer)
+
+## Current Task
+(unassigned)
+
+## Deliverables
+(none)
+
+## Preconditions
+(none)
+
+## Acceptance Criteria
+(none)
+
+## Context Files
+Read ONLY the files listed in the frontmatter `context_files` field, plus your own 4 files. Nothing else.
+
+## Strict Scope
+`strict_scope: false` — if `true`, you may only read files listed in `context_files` plus your own 4 files. If you need more, request scope expansion from Leader.
+
+## Completed Tasks
+(none)

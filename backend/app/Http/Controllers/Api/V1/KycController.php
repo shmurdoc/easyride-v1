@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Kyc\KycRejectRequest;
+use App\Http\Requests\Api\V1\Kyc\KycSubmitRequest;
 use App\Models\KycVerification;
 use App\Services\KycService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class KycController extends Controller
 {
@@ -14,27 +17,17 @@ class KycController extends Controller
         private KycService $kycService,
     ) {}
 
-    public function submit(Request $request): JsonResponse
+    public function submit(KycSubmitRequest $request): JsonResponse
     {
-        $request->validate([
-            'verification_type' => 'required|string|in:id_document,drivers_license,proof_of_address,vehicle_registration,vehicle_insurance,psv_license',
-            'document_type' => 'required|string|in:id_document,drivers_license,proof_of_address,vehicle_registration,vehicle_insurance,psv_license',
-            'document_number' => 'required|string|max:20',
-            'document_front' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
-            'document_back' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
-            'selfie' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
-            'expires_at' => 'nullable|date|after:today',
-        ]);
+        $validated = $request->validated();
 
         $verification = $this->kycService->submitVerification(
             $request->user(),
-            $request->verification_type,
-            $request->document_type,
-            $request->document_number,
+            $validated['verification_type'],
+            $validated['document_type'],
+            $validated['document_number'],
             $request->file('document_front'),
             $request->file('document_back'),
-            $request->file('selfie'),
-            $request->expires_at,
         );
 
         return response()->json([
@@ -64,18 +57,16 @@ class KycController extends Controller
         return response()->json(['message' => 'Verification approved']);
     }
 
-    public function reject(Request $request, KycVerification $verification): JsonResponse
+    public function reject(KycRejectRequest $request, KycVerification $verification): JsonResponse
     {
-        $request->validate([
-            'reason' => 'required|string|max:500',
-        ]);
+        $validated = $request->validated();
 
-        $this->kycService->rejectVerification($verification, $request->reason, $request->user()->id);
+        $this->kycService->rejectVerification($verification, $validated['reason'], $request->user()->id);
 
         return response()->json(['message' => 'Verification rejected']);
     }
 
-    public function download(KycVerification $verification, string $documentType): \Symfony\Component\HttpFoundation\Response
+    public function download(KycVerification $verification, string $documentType): Response
     {
         return $this->kycService->downloadDocument($verification, $documentType);
     }

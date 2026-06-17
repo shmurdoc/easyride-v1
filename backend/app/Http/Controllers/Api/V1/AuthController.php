@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Auth\CreateDriverRequest;
+use App\Http\Requests\Api\V1\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Api\V1\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-use App\Models\User;
+use App\Http\Resources\UserResource;
+use App\Http\Responses\ApiResponse;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -35,17 +40,20 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
-            'user' => $user->load('tenant'),
-            'token' => $token,
-        ], 201);
+        $user->load('tenant');
+
+        return ApiResponse::success(
+            data: ['user' => new UserResource($user), 'token' => $token],
+            message: 'Registration successful',
+            code: 201
+        );
     }
 
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::where('email', $request->email)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
@@ -53,10 +61,12 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
-            'user' => $user->load('tenant'),
-            'token' => $token,
-        ]);
+        $user->load('tenant');
+
+        return ApiResponse::success(
+            data: ['user' => new UserResource($user), 'token' => $token],
+            message: 'Login successful'
+        );
     }
 
     public function logout(Request $request): JsonResponse
@@ -68,21 +78,14 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json(
-            $request->user()->load(['tenant', 'roles', 'driverProfile', 'vehicle'])
+        return ApiResponse::success(
+            data: ['user' => new UserResource($request->user()->load(['tenant', 'roles', 'driverProfile', 'vehicle']))]
         );
     }
 
-    public function createDriver(Request $request): JsonResponse
+    public function createDriver(CreateDriverRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'phone_number' => 'required|string|max:20|unique:users,phone_number',
-            'password' => 'required|min:8|confirmed',
-            'tenant_id' => 'sometimes|string|exists:tenants,id',
-        ]);
-
+        $validated = $request->validated();
         $tenantId = $validated['tenant_id'] ?? $request->user()->tenant_id;
 
         $user = User::create([
@@ -93,6 +96,7 @@ class AuthController extends Controller
             'phone_number' => $validated['phone_number'],
             'role' => 'driver',
             'is_active' => true,
+            'is_approved' => true,
         ]);
 
         $user->assignRole('driver');
@@ -103,24 +107,20 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function forgotPassword(Request $request): JsonResponse
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        $request->validate(['email' => 'required|email']);
+        $validated = $request->validated();
 
-        $status = Password::sendResetLink($request->only('email'));
+        $status = Password::sendResetLink(['email' => $validated['email']]);
 
         return $status === Password::RESET_LINK_SENT
             ? response()->json(['message' => __($status)])
             : response()->json(['message' => __($status)], 400);
     }
 
-    public function resetPassword(Request $request): JsonResponse
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
-        $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|min:8|confirmed',
-        ]);
+        $validated = $request->validated();
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),

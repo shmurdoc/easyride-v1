@@ -8,6 +8,7 @@ use App\Services\SmsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
+use Illuminate\Notifications\Messages\SmsMessage;
 use Illuminate\Notifications\Notification;
 
 class RideStatusChanged extends Notification implements ShouldQueue
@@ -36,10 +37,12 @@ class RideStatusChanged extends Notification implements ShouldQueue
         return $this->getFcmNotification();
     }
 
-    public function toSms(object $notifiable): ?\Illuminate\Notifications\Messages\SmsMessage
+    public function toSms(object $notifiable): ?SmsMessage
     {
         $phone = $notifiable->phone_number;
-        if (!$phone) return null;
+        if (! $phone) {
+            return null;
+        }
 
         return null;
     }
@@ -62,7 +65,9 @@ class RideStatusChanged extends Notification implements ShouldQueue
     {
         $smsService = app(SmsService::class);
         $phone = $notifiable->phone_number;
-        if (!$phone) return;
+        if (! $phone) {
+            return;
+        }
 
         $driverName = $this->ride->driver?->name ?? '';
         $smsService->sendRideStatusUpdate($phone, $this->status, $driverName);
@@ -70,7 +75,7 @@ class RideStatusChanged extends Notification implements ShouldQueue
 
     public function broadcastOn(object $notifiable): array
     {
-        return ['ride.' . $this->ride->id];
+        return ['ride.'.$this->ride->id];
     }
 
     public function broadcastType(): string

@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Services\CashPaymentService;
 use App\Services\EscrowService;
 use App\Services\SettlementService;
-use App\Services\CashPaymentService;
 use Illuminate\Console\Command;
 
 class ProcessPayments extends Command
 {
     protected $signature = 'payments:process {--type=all : Type of processing (escrow|payouts|reconciliation|all)}';
+
     protected $description = 'Process payment operations: escrow release, driver payouts, cash reconciliation';
 
     public function handle(

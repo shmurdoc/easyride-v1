@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('rides', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('tenant_id');
+            $table->uuid('tenant_id')->nullable();
             $table->uuid('rider_id');
             $table->uuid('driver_id')->nullable();
             $table->decimal('pickup_latitude', 10, 7);

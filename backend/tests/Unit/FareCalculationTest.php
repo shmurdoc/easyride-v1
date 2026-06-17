@@ -2,17 +2,43 @@
 
 namespace Tests\Unit;
 
+use App\Models\SystemSetting;
 use App\Services\FareCalculationService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class FareCalculationTest extends TestCase
 {
+    use RefreshDatabase;
+
     private FareCalculationService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new FareCalculationService();
+        $this->service = $this->app->make(FareCalculationService::class);
+
+        $settings = [
+            'fare_economy_base_fare' => '25',
+            'fare_economy_per_km_rate' => '12',
+            'fare_economy_per_minute_rate' => '2',
+            'fare_economy_minimum_fare' => '40',
+            'fare_standard_base_fare' => '35',
+            'fare_standard_per_km_rate' => '15',
+            'fare_standard_per_minute_rate' => '3',
+            'fare_standard_minimum_fare' => '50',
+            'fare_premium_base_fare' => '55',
+            'fare_premium_per_km_rate' => '22',
+            'fare_premium_per_minute_rate' => '5',
+            'fare_premium_minimum_fare' => '80',
+            'fare_xl_base_fare' => '45',
+            'fare_xl_per_km_rate' => '18',
+            'fare_xl_per_minute_rate' => '4',
+            'fare_xl_minimum_fare' => '65',
+        ];
+        foreach ($settings as $key => $value) {
+            SystemSetting::create(['key' => $key, 'value' => $value]);
+        }
     }
 
     public function test_calculate_fare_returns_correct_structure(): void
@@ -96,7 +122,7 @@ class FareCalculationTest extends TestCase
 
     public function test_calculate_surge_returns_valid_multipler(): void
     {
-        $this->assertEquals(1.0, $this->service->calculateSurge(10, 5));
+        $this->assertEquals(1.15, $this->service->calculateSurge(10, 5));
         $this->assertEquals(2.5, $this->service->calculateSurge(0, 5));
     }
 

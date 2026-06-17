@@ -1,11 +1,25 @@
 <?php
 
+use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\ApiRateLimiterMiddleware;
+use App\Http\Middleware\DriverMiddleware;
+use App\Http\Middleware\InputSanitizationMiddleware;
+use App\Http\Middleware\SecurityHeadersMiddleware;
+use App\Http\Middleware\TenantMiddleware;
+use App\Providers\EventServiceProvider;
+use App\Providers\PaymentServiceProvider;
+use App\Providers\SentryServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use Symfony\Component\HttpKernel\Exception\ThrottleRequestsException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,33 +28,43 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            RateLimiter::for('api', function (Request $request) {
-                return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            RateLimiter::for('auth-login', function (Request $request) {
+                return Limit::perMinute(10)->by($request->ip().'|'.($request->userAgent() ?? ''));
             });
 
-            RateLimiter::for('auth', function (Request $request) {
-                return Limit::perMinute(10)->by($request->ip());
+            RateLimiter::for('auth-register', function (Request $request) {
+                return Limit::perMinute(5)->by($request->ip());
+            });
+
+            RateLimiter::for('auth-password', function (Request $request) {
+                return Limit::perMinute(3)->by($request->ip());
+            });
+
+            RateLimiter::for('api', function (Request $request) {
+                return $request->user()
+                    ? Limit::perMinute(60)->by($request->user()->id)
+                    : Limit::perMinute(30)->by($request->ip());
             });
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
-            \App\Http\Middleware\InputSanitizationMiddleware::class,
-            \App\Http\Middleware\ApiRateLimiterMiddleware::class,
+            EnsureFrontendRequestsAreStateful::class,
+            SecurityHeadersMiddleware::class,
+            InputSanitizationMiddleware::class,
+            ApiRateLimiterMiddleware::class,
         ]);
 
         $middleware->alias([
-            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-            'tenant' => \App\Http\Middleware\TenantMiddleware::class,
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
-            'driver' => \App\Http\Middleware\DriverMiddleware::class,
-            'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
-            'rate.limit' => \App\Http\Middleware\ApiRateLimiterMiddleware::class,
-            'sanitize' => \App\Http\Middleware\InputSanitizationMiddleware::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
+            'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'tenant' => TenantMiddleware::class,
+            'admin' => AdminMiddleware::class,
+            'driver' => DriverMiddleware::class,
+            'security.headers' => SecurityHeadersMiddleware::class,
+            'rate.limit' => ApiRateLimiterMiddleware::class,
+            'sanitize' => InputSanitizationMiddleware::class,
         ]);
 
         $middleware->trustProxies(at: '*');
@@ -49,8 +73,24 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(function (Request $request) {
             return $request->is('api/*') || $request->expectsJson();
         });
+
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Too many requests. Please try again later.',
+                    'retry_after' => $e->getHeaders()['Retry-After'] ?? 60,
+                ], 429, $e->getHeaders());
+            }
+        });
+
+        $exceptions->reportable(function (Throwable $e) {
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($e);
+            }
+        });
     })
     ->withProviders([
-        \App\Providers\PaymentServiceProvider::class,
-        \App\Providers\SentryServiceProvider::class,
+        PaymentServiceProvider::class,
+        SentryServiceProvider::class,
+        EventServiceProvider::class,
     ])->create();

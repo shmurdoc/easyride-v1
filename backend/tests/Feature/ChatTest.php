@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Ride;
 use App\Models\RideChatMessage;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -45,6 +45,7 @@ class ChatTest extends TestCase
 
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/chat/rides/{$ride->id}/messages", [
+            'ride_id' => $ride->id,
             'message' => 'Hi, I am at the pickup point',
         ]);
 
@@ -116,6 +117,7 @@ class ChatTest extends TestCase
 
         Sanctum::actingAs($driver);
         $response = $this->postJson("/api/v1/chat/rides/{$ride->id}/messages", [
+            'ride_id' => $ride->id,
             'message' => 'On my way!',
         ]);
 
@@ -225,6 +227,7 @@ class ChatTest extends TestCase
 
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/chat/rides/{$ride->id}/messages", [
+            'ride_id' => $ride->id,
             'message' => 'Sneaky',
         ]);
 

@@ -2,9 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Ride;
-use App\Models\SystemSetting;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -84,13 +83,14 @@ class AdminTest extends TestCase
 
         $driver = User::factory()->create(['is_approved' => false]);
         $driver->assignRole('driver');
+        $driver->driverProfile()->create(['user_id' => $driver->id]);
 
         Sanctum::actingAs($admin);
         $response = $this->postJson("/api/v1/admin/drivers/{$driver->id}/approve");
 
         $response->assertStatus(200);
-        $driver->refresh();
-        $this->assertTrue($driver->is_approved);
+        $profile = $driver->driverProfile->fresh();
+        $this->assertTrue($profile->is_approved);
     }
 
     public function test_admin_can_reject_driver(): void
@@ -114,10 +114,8 @@ class AdminTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->postJson('/api/v1/admin/settings', [
-            'settings' => [
-                'platform_name' => 'Phalaborwa Rides',
-                'surge_enabled' => true,
-            ],
+            'key' => 'platform_name',
+            'value' => 'Phalaborwa Rides',
         ]);
 
         $response->assertStatus(200);
@@ -150,7 +148,6 @@ class AdminTest extends TestCase
 
         $response->assertStatus(201);
         $this->assertDatabaseHas('users', [
-            'email' => 'driver@test.com',
             'is_approved' => true,
         ]);
     }

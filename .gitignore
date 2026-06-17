@@ -30,6 +30,7 @@
 /apps/*/node_modules/
 **/node_modules/
 **/.expo/
+**/.env
 
 # Local debug scratch files (use docker cp + run, not git)
 backend/check_admin.php

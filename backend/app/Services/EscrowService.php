@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 class EscrowService
 {
     private const HOLD_DURATION_HOURS = 24;
+
     private const DISPUTE_WINDOW_HOURS = 24;
 
     public function __construct(
@@ -48,13 +49,15 @@ class EscrowService
     {
         if ($payment->status !== Payment::STATUS_COMPLETED) {
             Log::warning('Escrow release: Payment not completed', ['payment_id' => $payment->id]);
+
             return null;
         }
 
         return DB::transaction(function () use ($payment) {
             $ride = $payment->ride;
-            if (!$ride || !$ride->driver) {
+            if (! $ride || ! $ride->driver) {
                 Log::warning('Escrow release: No driver for payment', ['payment_id' => $payment->id]);
+
                 return null;
             }
 
@@ -67,6 +70,7 @@ class EscrowService
                     'pending' => $pendingBalance,
                     'payout' => $payoutAmount,
                 ]);
+
                 return null;
             }
 
@@ -114,7 +118,10 @@ class EscrowService
 
     public function isWithinDisputeWindow(Ride $ride): bool
     {
-        if (!$ride->completed_at) return false;
+        if (! $ride->completed_at) {
+            return false;
+        }
+
         return $ride->completed_at->diffInHours(now()) < self::DISPUTE_WINDOW_HOURS;
     }
 
@@ -126,7 +133,9 @@ class EscrowService
 
         return DB::transaction(function () use ($payment) {
             $ride = $payment->ride;
-            if (!$ride || !$ride->driver) return false;
+            if (! $ride || ! $ride->driver) {
+                return false;
+            }
 
             $driverWallet = $this->walletService->getOrCreateWallet($ride->driver);
             $payoutAmount = (float) ($payment->driver_payout ?? 0);
@@ -135,11 +144,13 @@ class EscrowService
             if ($pendingBalance >= $payoutAmount) {
                 $driverWallet->decrement('pending_balance', $payoutAmount);
                 $payment->update(['dispute_hold' => true]);
+
                 return true;
             }
 
             $driverWallet->decrement('pending_balance', $pendingBalance);
             $payment->update(['dispute_hold' => true, 'dispute_hold_shortfall' => $payoutAmount - $pendingBalance]);
+
             return true;
         });
     }

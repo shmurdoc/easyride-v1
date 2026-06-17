@@ -1,71 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { rides } from '@easyryde/shared';
-import { COLORS, formatCurrency, formatDate, RIDE_STATUS_COLORS } from '@easyryde/shared';
+import React, { useState, useEffect, useRef } from 'react';
+import { FlatList, TouchableOpacity, StyleSheet, Alert, Linking, Animated, View, Text } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { rides, api, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { ActivityCard, Shimmer, GradientText } from '@easyryde/shared';
 import type { Ride } from '@easyryde/shared';
 
 export default function RideHistoryScreen({ navigation }: any) {
   const [rideHistory, setRideHistory] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  useEffect(() => { loadHistory(); }, []);
 
   async function loadHistory() {
-    try {
-      const data = await rides.list({ per_page: '50' });
-      setRideHistory(data.data);
-    } catch {} finally {
-      setLoading(false);
-    }
+    try { const data = await rides.list({ per_page: '50' }); setRideHistory(data.data); }
+    catch (err) { console.warn('Failed to load ride history:', err); } finally { setLoading(false); }
   }
 
-  const renderRide = ({ item }: { item: Ride }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('RideTracking', { rideId: item.id })}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardDate}>{formatDate(item.created_at)}</Text>
-        <View style={[styles.statusDot, { backgroundColor: RIDE_STATUS_COLORS[item.status] }]} />
+  function RideItem({ item, index }: { item: Ride; index: number }) {
+    const anim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+      Animated.spring(anim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 12,
+        bounciness: 6,
+        delay: index * 60,
+      }).start();
+    }, []);
+    const style = { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }] };
+    return (
+      <Animated.View style={style}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('RideTracking', { rideId: item.id })}
+          style={styles.listItem}
+        >
+          <View style={styles.listIcon}>
+            <Ionicons name="car-outline" size={20} color={COLORS.textMuted} />
+          </View>
+          <View style={styles.listText}>
+            <Text style={styles.listAddress}>{item.pickup_address} → {item.dropoff_address}</Text>
+            <Text style={styles.listDate}>{item.category || 'Comfort'}</Text>
+            {item.total_fare && (
+              <Text style={styles.listFare}>R {item.total_fare.toFixed(2)}</Text>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.textDim} />
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Activity</Text>
+        <View style={{ padding: SPACING.base, gap: SPACING.md }}>
+          <Shimmer height={160} borderRadius={RADIUS.lg} />
+          {[1, 2, 3].map(i => (
+            <Shimmer key={i} height={72} borderRadius={RADIUS.md} />
+          ))}
+        </View>
       </View>
-      <Text style={styles.route}>{item.pickup_address} → {item.dropoff_address}</Text>
-      <View style={styles.cardFooter}>
-        <Text style={styles.category}>{item.category}</Text>
-        {item.total_fare && <Text style={styles.fare}>{formatCurrency(item.total_fare)}</Text>}
-      </View>
-    </TouchableOpacity>
-  );
+    );
+  }
+
+  const recentRide = rideHistory[0];
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Ride History</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Activity</Text>
+        <Ionicons name="time-outline" size={22} color={COLORS.textMuted} />
+      </View>
+
       <FlatList
         data={rideHistory}
         keyExtractor={(item) => item.id}
-        renderItem={renderRide}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={!loading ? <Text style={styles.empty}>No rides yet</Text> : null}
+        contentContainerStyle={{ padding: SPACING.base }}
+        ListHeaderComponent={
+          <>
+            {recentRide && (
+              <>
+                <Text style={styles.sectionLabel}>Past</Text>
+                <ActivityCard
+                  ride={recentRide}
+                  onPress={() => navigation.navigate('RideTracking', { rideId: recentRide.id })}
+                />
+              </>
+            )}
+          </>
+        }
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No rides yet</Text>
+        }
+        renderItem={({ item, index }) => <RideItem item={item} index={index} />}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  title: { fontSize: 28, fontWeight: 'bold', color: COLORS.gray[800], padding: 24, paddingBottom: 8 },
-  list: { padding: 24 },
-  card: {
-    backgroundColor: COLORS.white, borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: COLORS.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  cardDate: { fontSize: 13, color: COLORS.gray[400] },
-  statusDot: { width: 10, height: 10, borderRadius: 5 },
-  route: { fontSize: 15, color: COLORS.gray[700], marginBottom: 8 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  category: { fontSize: 13, color: COLORS.gray[500], textTransform: 'capitalize' },
-  fare: { fontSize: 18, fontWeight: 'bold', color: COLORS.primary },
-  empty: { textAlign: 'center', color: COLORS.gray[400], marginTop: 40 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.base,
+    paddingBottom: SPACING.sm,
+  },
+  title: {
+    color: COLORS.text,
+    fontSize: 26,
+    fontWeight: '700',
+  },
+  sectionLabel: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: SPACING.sm,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
+    gap: SPACING.md,
+  },
+  listIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listText: {
+    flex: 1,
+  },
+  listAddress: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  listDate: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  listFare: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginTop: 40,
+  },
 });

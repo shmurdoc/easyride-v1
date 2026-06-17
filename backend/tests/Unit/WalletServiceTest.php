@@ -2,10 +2,9 @@
 
 namespace Tests\Unit;
 
-use App\Services\WalletService;
 use App\Models\User;
-use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Services\WalletService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +17,7 @@ class WalletServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new WalletService();
+        $this->service = new WalletService;
     }
 
     public function test_get_or_create_wallet_creates_wallet(): void

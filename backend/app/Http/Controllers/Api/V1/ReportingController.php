@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Reporting\RevenueReportRequest;
 use App\Models\Delivery;
 use App\Models\Payment;
 use App\Models\Ride;
@@ -69,9 +70,9 @@ class ReportingController extends Controller
             ->where('status', 'completed')
             ->where('created_at', '>=', $from)
             ->select(
-                DB::raw("DATE(created_at) as date"),
-                DB::raw("COUNT(*) as rides"),
-                DB::raw("SUM(total_fare) as revenue"),
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as rides'),
+                DB::raw('SUM(total_fare) as revenue'),
             )
             ->groupBy('date')
             ->orderBy('date')
@@ -88,13 +89,9 @@ class ReportingController extends Controller
         ]);
     }
 
-    public function revenue(Request $request): JsonResponse
+    public function revenue(RevenueReportRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'from' => 'sometimes|date',
-            'to' => 'sometimes|date|after_or_equal:from',
-            'group_by' => 'sometimes|string|in:day,week,month',
-        ]);
+        $validated = $request->validated();
 
         $from = isset($validated['from']) ? Carbon::parse($validated['from']) : now()->subDays(30);
         $to = isset($validated['to']) ? Carbon::parse($validated['to']) : now();
@@ -112,10 +109,10 @@ class ReportingController extends Controller
             ->where('created_at', '<=', $to)
             ->select(
                 DB::raw("TO_CHAR(created_at, '{$periodFormat}') as period"),
-                DB::raw("COUNT(*) as total_rides"),
-                DB::raw("SUM(total_fare) as total_revenue"),
-                DB::raw("AVG(total_fare) as avg_fare"),
-                DB::raw("SUM(distance_km) as total_distance"),
+                DB::raw('COUNT(*) as total_rides'),
+                DB::raw('SUM(total_fare) as total_revenue'),
+                DB::raw('AVG(total_fare) as avg_fare'),
+                DB::raw('SUM(distance_km) as total_distance'),
             )
             ->groupBy('period')
             ->orderBy('period')

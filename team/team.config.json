@@ -1,0 +1,243 @@
+{
+  "project": {
+    "name": "EasyRyde",
+    "type": "mobile-api",
+    "root": "."
+  },
+  "members": [
+    {
+      "id": "ceo",
+      "type": "ceo",
+      "role": "Strategic direction and decomposition",
+      "area": [
+        "docs/strategy/"
+      ],
+      "tech": "strategy",
+      "quality_gates": [
+        "team validate"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "eng-manager",
+      "type": "eng-manager",
+      "role": "Planning and execution framing (Leader)",
+      "area": [
+        "team/"
+      ],
+      "tech": "orchestration",
+      "quality_gates": [
+        "team validate",
+        "project tests"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "designer",
+      "type": "designer",
+      "role": "UX and product-design decisions",
+      "area": [
+        "mobile/packages/shared/"
+      ],
+      "tech": "React Native / Expo / CSS",
+      "quality_gates": [
+        "design review"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "builder-1",
+      "type": "builder",
+      "role": "Implementation — Mobile (Android builds / Expo prebuild)",
+      "area": [
+        "mobile/apps/"
+      ],
+      "tech": "Expo SDK 51 / Gradle 8.6 / JDK 17",
+      "quality_gates": [
+        "project tests",
+        "linter",
+        "type check"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "builder-2",
+      "type": "builder",
+      "role": "Implementation — Mobile (Metro / Dev Server / Shared Package)",
+      "area": [
+        "mobile/packages/shared/",
+        "mobile/apps/"
+      ],
+      "tech": "Expo SDK 51 / React Native / TypeScript",
+      "quality_gates": [
+        "project tests",
+        "linter",
+        "type check"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "builder-3",
+      "type": "builder",
+      "role": "Implementation — Backend (Laravel / PHP)",
+      "area": [
+        "backend/"
+      ],
+      "tech": "PHP 8.4 / Laravel 11",
+      "quality_gates": [
+        "project tests",
+        "linter",
+        "type check"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "reviewer",
+      "type": "reviewer",
+      "role": "Code quality and review (Senior Lead)",
+      "area": [
+        "team/reviews/"
+      ],
+      "tech": "code-review",
+      "quality_gates": [
+        "review check"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "debugger-1",
+      "type": "debugger",
+      "role": "Root-cause analysis #1 (on-call)",
+      "area": [
+        "."
+      ],
+      "tech": "any",
+      "quality_gates": [
+        "regression test",
+        "project tests"
+      ],
+      "strict_scope": true
+    },
+    {
+      "id": "debugger-2",
+      "type": "debugger",
+      "role": "Root-cause analysis #2",
+      "area": [
+        "."
+      ],
+      "tech": "any",
+      "quality_gates": [
+        "regression test",
+        "project tests"
+      ],
+      "strict_scope": true
+    },
+    {
+      "id": "debugger-3",
+      "type": "debugger",
+      "role": "Root-cause analysis #3",
+      "area": [
+        "."
+      ],
+      "tech": "any",
+      "quality_gates": [
+        "regression test",
+        "project tests"
+      ],
+      "strict_scope": true
+    },
+    {
+      "id": "debugger-4",
+      "type": "debugger",
+      "role": "Root-cause analysis #4 (overflow)",
+      "area": [
+        "."
+      ],
+      "tech": "any",
+      "quality_gates": [
+        "regression test",
+        "project tests"
+      ],
+      "strict_scope": true
+    },
+    {
+      "id": "qa-lead-backend",
+      "type": "qa-lead",
+      "role": "QA — Backend (PHP/Pest, API integration)",
+      "area": [
+        "backend/tests/"
+      ],
+      "tech": "PHPUnit / Pest",
+      "quality_gates": [
+        "test coverage",
+        "qa report",
+        "project tests"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "qa-lead-frontend",
+      "type": "qa-lead",
+      "role": "QA — Mobile (Jest / React Native Testing Library)",
+      "area": [
+        "mobile/"
+      ],
+      "tech": "Jest / React Native Testing Library",
+      "quality_gates": [
+        "test coverage",
+        "qa report",
+        "project tests"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "qa-lead-integration",
+      "type": "qa-lead",
+      "role": "QA — Integration (Docker, E2E, CI)",
+      "area": [
+        ".github/workflows/",
+        "docker-compose.yml"
+      ],
+      "tech": "GitHub Actions / Docker",
+      "quality_gates": [
+        "test coverage",
+        "qa report",
+        "project tests"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "release-engineer",
+      "type": "release-engineer",
+      "role": "Release readiness and publishing flow",
+      "area": [
+        ".github/workflows/",
+        "team/"
+      ],
+      "tech": "GitHub Actions / Docker / Gradle",
+      "quality_gates": [
+        "CI green",
+        "canary check",
+        "smoke test"
+      ],
+      "strict_scope": false
+    },
+    {
+      "id": "doc-engineer",
+      "type": "doc-engineer",
+      "role": "Documentation and handoff quality",
+      "area": [
+        "docs/"
+      ],
+      "tech": "Markdown / PDF",
+      "quality_gates": [
+        "docs build",
+        "link check"
+      ],
+      "strict_scope": false
+    }
+  ],
+  "preset": "mobile-api",
+  "version": "4.2",
+  "created_at": "2026-06-09T11:54:13.575Z"
+}

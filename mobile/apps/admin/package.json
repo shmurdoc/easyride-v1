@@ -2,28 +2,32 @@
   "name": "easyryde-admin",
   "version": "1.0.0",
   "private": true,
-  "main": "node_modules/expo/AppEntry.js",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@easyryde/shared": "file:../../packages/shared",
+    "@expo/vector-icons": "^14.0.0",
+    "@react-navigation/bottom-tabs": "^6.5.0",
+    "@react-navigation/native": "^6.1.0",
+    "@react-navigation/native-stack": "^6.9.0",
     "expo": "~51.0.0",
+    "expo-linear-gradient": "~13.0.0",
+    "expo-secure-store": "~14.0.0",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-native": "0.74.0",
+    "react-native-maps": "^1.14.0",
     "react-native-safe-area-context": "4.10.0",
-    "react-native-screens": "3.31.0",
-    "@react-navigation/native": "^6.1.0",
-    "@react-navigation/native-stack": "^6.9.0",
-    "@react-navigation/bottom-tabs": "^6.5.0",
-    "@expo/vector-icons": "^14.0.0",
-    "@easyryde/shared": "file:../../packages/shared"
+    "react-native-screens": "3.31.0"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
+    "babel-preset-expo": "~11.0.15",
     "typescript": "^5.5.0"
   }
 }

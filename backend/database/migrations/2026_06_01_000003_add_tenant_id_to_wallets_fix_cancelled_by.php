@@ -15,9 +15,12 @@ return new class extends Migration
         });
 
         if (Schema::hasColumn('rides', 'cancelled_by')) {
-            \DB::statement('ALTER TABLE rides DROP CONSTRAINT IF EXISTS rides_cancelled_by_check');
-            \DB::statement('ALTER TABLE rides ALTER COLUMN cancelled_by TYPE VARCHAR(40) USING cancelled_by::varchar');
-            \DB::statement('ALTER TABLE rides ALTER COLUMN cancelled_by DROP NOT NULL');
+            $driver = DB::connection()->getDriverName();
+            if ($driver === 'pgsql') {
+                DB::statement('ALTER TABLE rides DROP CONSTRAINT IF EXISTS rides_cancelled_by_check');
+                DB::statement('ALTER TABLE rides ALTER COLUMN cancelled_by TYPE VARCHAR(40) USING cancelled_by::varchar');
+                DB::statement('ALTER TABLE rides ALTER COLUMN cancelled_by DROP NOT NULL');
+            }
         }
     }
 
@@ -29,7 +32,10 @@ return new class extends Migration
         });
 
         if (Schema::hasColumn('rides', 'cancelled_by')) {
-            \DB::statement('ALTER TABLE rides ALTER COLUMN cancelled_by TYPE VARCHAR(20)');
+            $driver = DB::connection()->getDriverName();
+            if ($driver === 'pgsql') {
+                DB::statement('ALTER TABLE rides ALTER COLUMN cancelled_by TYPE VARCHAR(20)');
+            }
         }
     }
 };

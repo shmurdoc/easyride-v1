@@ -11,8 +11,11 @@ use Illuminate\Support\Facades\Log;
 class PayFastService
 {
     private const SANDBOX_URL = 'https://sandbox.payfast.co.za/eng/process';
+
     private const PRODUCTION_URL = 'https://www.payfast.co.za/eng/process';
+
     private const SANDBOX_ITN_URL = 'https://sandbox.payfast.co.za/eng/query/validate';
+
     private const PRODUCTION_ITN_URL = 'https://www.payfast.co.za/eng/query/validate';
 
     public function __construct(
@@ -44,9 +47,9 @@ class PayFastService
 
         $fields['signature'] = $this->generateSignature($fields);
 
-        $html = '<form id="payfast-form" action="' . $this->getBaseUrl() . '" method="post">';
+        $html = '<form id="payfast-form" action="'.$this->getBaseUrl().'" method="post">';
         foreach ($fields as $key => $value) {
-            $html .= '<input type="hidden" name="' . $key . '" value="' . htmlspecialchars((string) $value) . '" />';
+            $html .= '<input type="hidden" name="'.$key.'" value="'.htmlspecialchars((string) $value).'" />';
         }
         $html .= '</form>';
         $html .= '<script>document.getElementById("payfast-form").submit();</script>';
@@ -73,21 +76,23 @@ class PayFastService
 
         $fields['signature'] = $this->generateSignature($fields);
 
-        return $this->getBaseUrl() . '?' . http_build_query($fields);
+        return $this->getBaseUrl().'?'.http_build_query($fields);
     }
 
     public function verifyItn(Request $request): bool
     {
         $data = $request->all();
 
-        if (!isset($data['payment_status']) || $data['payment_status'] !== 'COMPLETE') {
+        if (! isset($data['payment_status']) || $data['payment_status'] !== 'COMPLETE') {
             Log::warning('PayFast ITN: Payment not complete', ['status' => $data['payment_status'] ?? 'none']);
+
             return false;
         }
 
         $signature = $this->generateSignature($data);
-        if (!isset($data['signature']) || $data['signature'] !== $signature) {
+        if (! isset($data['signature']) || $data['signature'] !== $signature) {
             Log::warning('PayFast ITN: Invalid signature');
+
             return false;
         }
 
@@ -101,6 +106,7 @@ class PayFastService
                         'expected' => $data['amount'],
                         'received' => $data['amount_gross'],
                     ]);
+
                     return false;
                 }
 
@@ -108,9 +114,11 @@ class PayFastService
             }
 
             Log::warning('PayFast ITN: Server returned INVALID', ['response' => $response->body()]);
+
             return false;
         } catch (\Exception $e) {
             Log::error('PayFast ITN: Verification failed', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -121,8 +129,12 @@ class PayFastService
 
         $fields = [];
         foreach ($data as $key => $value) {
-            if (in_array($key, $excludedKeys, true)) continue;
-            if ($value === '') continue;
+            if (in_array($key, $excludedKeys, true)) {
+                continue;
+            }
+            if ($value === '') {
+                continue;
+            }
             $fields[$key] = $value;
         }
 
@@ -130,13 +142,13 @@ class PayFastService
 
         $parts = [];
         foreach ($fields as $key => $value) {
-            $parts[] = $key . '=' . urlencode((string) $value);
+            $parts[] = $key.'='.urlencode((string) $value);
         }
 
         $pfOutput = implode('&', $parts);
 
-        if (!empty($this->passphrase)) {
-            $pfOutput .= '&passphrase=' . urlencode($this->passphrase);
+        if (! empty($this->passphrase)) {
+            $pfOutput .= '&passphrase='.urlencode($this->passphrase);
         }
 
         return md5($pfOutput);
@@ -153,10 +165,10 @@ class PayFastService
 
         $pfOutput = '';
         foreach ($verificationFields as $key => $value) {
-            $pfOutput .= $key . '=' . urlencode((string) $value) . '&';
+            $pfOutput .= $key.'='.urlencode((string) $value).'&';
         }
 
-        $pfOutput .= 'passphrase=' . urlencode($this->passphrase);
+        $pfOutput .= 'passphrase='.urlencode($this->passphrase);
 
         return ['pf_output' => $pfOutput];
     }

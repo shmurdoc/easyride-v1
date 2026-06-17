@@ -8,8 +8,6 @@ use App\Events\NewRideRequest;
 use App\Models\Ride;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Traits\HasRoles;
 
 class RideMatchingService
 {
@@ -30,7 +28,7 @@ class RideMatchingService
         string $category = 'standard',
         float $radiusKm = 5.0,
     ): Collection {
-        $haversine = "(
+        $haversine = '(
             6371 * acos(
                 cos(radians(?))
                 * cos(radians(current_latitude))
@@ -38,7 +36,7 @@ class RideMatchingService
                 + sin(radians(?))
                 * sin(radians(current_latitude))
             )
-        )";
+        )';
 
         return User::role('driver')
             ->where('is_online', true)
@@ -110,5 +108,19 @@ class RideMatchingService
 
         $driverIds = $nearbyDrivers->pluck('id')->toArray();
         NewRideRequest::dispatch($ride, $driverIds);
+    }
+
+    public function expireStaleRides(): int
+    {
+        $count = Ride::where('status', 'searching')
+            ->where('created_at', '<', now()->subSeconds(60))
+            ->update([
+                'status' => 'cancelled',
+                'cancelled_by' => 'system',
+                'cancelled_at' => now(),
+                'cancellation_reason' => 'no_driver_available',
+            ]);
+
+        return $count;
     }
 }

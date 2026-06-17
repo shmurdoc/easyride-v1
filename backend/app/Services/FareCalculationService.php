@@ -19,6 +19,10 @@ class FareCalculationService
         'delivery' => ['base' => 20, 'per_km' => 10, 'per_min' => 1, 'min' => 30],
     ];
 
+    public function __construct(
+        protected RouteService $routeService,
+    ) {}
+
     public function calculate(
         float $pickupLat,
         float $pickupLng,
@@ -26,10 +30,9 @@ class FareCalculationService
         float $dropoffLng,
         string $category = 'standard',
     ): array {
-        $distanceKm = $this->haversineDistance($pickupLat, $pickupLng, $dropoffLat, $dropoffLng);
-        $durationMinutes = $distanceKm * 3;
+        $route = $this->routeService->getRoute($pickupLat, $pickupLng, $dropoffLat, $dropoffLng);
 
-        return $this->calculateFare($distanceKm, $durationMinutes, $category);
+        return $this->calculateFare($route['distance_km'], $route['duration_minutes'], $category);
     }
 
     public function calculateFinalFare(Ride $ride): float

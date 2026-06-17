@@ -1,124 +1,110 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { useAuth, useSocket, rides } from '@easyryde/shared';
-import { COLORS, RIDE_STATUS_LABELS } from '@easyryde/shared';
-import type { Ride } from '@easyryde/shared';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Marker, Polyline } from 'react-native-maps';
+import { useAuth, useSocket, rides, COLORS, GRADIENTS, SPACING, RADIUS, decodePolyline, scheduleLocalNotification, GlowButton, GlassCard, GradientText } from '@easyryde/shared';
+import type { Ride, DriverNav, DriverRoute } from '@easyryde/shared';
+import type MapViewType from 'react-native-maps';
 
-export default function ActiveRideScreen({ route, navigation }: any) {
+export default function ActiveRideScreen({ route, navigation }: { route: DriverRoute<'ActiveRide'>; navigation: DriverNav }) {
   const { rideId, riderId } = route.params;
   const { user, token } = useAuth();
   const { isConnected, emit, on } = useSocket({ token: token || '' });
   const [ride, setRide] = useState<Ride | null>(null);
+  const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const mapRef = useRef<MapViewType>(null);
 
-  useEffect(() => {
-    loadRide();
-  }, [rideId]);
+  useEffect(() => { loadRide(); }, [rideId]);
 
   useEffect(() => {
     if (!isConnected) return;
-    const unsub1 = on('ride:started', (data: any) => {
-      if (data.rideId === rideId) loadRide();
-    });
-    const unsub2 = on('ride:cancelled', (data: any) => {
-      if (data.rideId === rideId) {
-        Alert.alert('Ride Cancelled', 'Rider cancelled the ride');
-        navigation.goBack();
-      }
-    });
-    return () => { unsub1(); unsub2(); };
+    const unsubs = [
+      on('ride:started', (data: any) => {
+        if (data.rideId === rideId) {
+          loadRide();
+          scheduleLocalNotification('Ride Started', 'The ride is now in progress. Drive safely!');
+        }
+      }),
+      on('ride:cancelled', (data: any) => {
+        if (data.rideId === rideId) {
+          scheduleLocalNotification('Ride Cancelled', 'Rider cancelled the ride');
+          Alert.alert('Ride Cancelled', 'Rider cancelled the ride');
+          navigation.goBack();
+        }
+      }),
+    ];
+    return () => { unsubs.forEach(u => u()); };
   }, [isConnected]);
 
-  async function loadRide() {
+  useEffect(() => {
+    if (!ride?.route_polyline) return;
     try {
-      const data = await rides.get(rideId);
-      setRide(data);
+      const decoded = decodePolyline(ride.route_polyline);
+      setRouteCoords(decoded);
     } catch {}
-  }
+  }, [ride?.route_polyline]);
 
-  const markArrived = async () => {
-    try {
-      await rides.updateLocation(rideId, ride?.pickup_latitude || 0, ride?.pickup_longitude || 0);
-      emit('driver:arrived', { rideId, riderId });
-      loadRide();
-    } catch {}
-  };
+  useEffect(() => {
+    if (routeCoords.length === 0 || !ride) return;
+    const timer = setTimeout(() => {
+      mapRef.current?.fitToCoordinates(
+        [
+          { latitude: ride.pickup_latitude, longitude: ride.pickup_longitude },
+          { latitude: ride.dropoff_latitude, longitude: ride.dropoff_longitude },
+          ...routeCoords.slice(0, 1),
+          ...routeCoords.slice(-1),
+        ],
+        { edgePadding: { top: 100, right: 50, bottom: 250, left: 50 }, animated: true },
+      );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [routeCoords, ride]);
 
-  const startRide = async () => {
-    try {
-      emit('ride:start', { rideId, otherUserId: riderId });
-      loadRide();
-    } catch {}
-  };
-
-  const completeRide = async () => {
-    try {
-      emit('ride:complete', { rideId, otherUserId: riderId, fare: ride?.total_fare });
-      Alert.alert('Ride Completed', 'Great job!', [
-        { text: 'OK', onPress: () => navigation.navigate('Main') },
-      ]);
-    } catch {}
-  };
-
-  const openChat = () => {
-    navigation.navigate('Chat', { rideId, receiverId: riderId });
-  };
+  async function loadRide() { try { const data = await rides.get(rideId); setRide(data); } catch {} }
 
   if (!ride) return null;
 
   return (
-    <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: ride.pickup_latitude,
-          longitude: ride.pickup_longitude,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }}
-      >
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <MapView ref={mapRef} style={{ flex: 1 }} initialRegion={{ latitude: ride.pickup_latitude, longitude: ride.pickup_longitude, latitudeDelta: 0.02, longitudeDelta: 0.02 }}>
         <Marker coordinate={{ latitude: ride.pickup_latitude, longitude: ride.pickup_longitude }} title="Pickup" pinColor={COLORS.success} />
-        {ride.dropoff_latitude && (
-          <Marker coordinate={{ latitude: ride.dropoff_latitude, longitude: ride.dropoff_longitude }} title="Dropoff" pinColor={COLORS.danger} />
+        {ride.dropoff_latitude && <Marker coordinate={{ latitude: ride.dropoff_latitude, longitude: ride.dropoff_longitude }} title="Dropoff" pinColor={COLORS.error} />}
+        {routeCoords.length > 0 && (
+          <>
+            <Polyline coordinates={routeCoords} strokeColor={COLORS.primary} strokeWidth={4} />
+            <Polyline coordinates={routeCoords} strokeColor={`${COLORS.primary}40`} strokeWidth={8} />
+          </>
         )}
       </MapView>
 
+      <LinearGradient colors={['rgba(10,10,10,0)', 'rgba(10,10,10,0.95)']} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 80 }} />
+
       <View style={styles.panel}>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{RIDE_STATUS_LABELS[ride.status]}</Text>
-        </View>
+        <GradientText colors={GRADIENTS.primary} style={{ fontSize: 13, fontWeight: '600', lineHeight: 18, marginBottom: SPACING.md }}>
+          {ride.status.replace('_', ' ')}
+        </GradientText>
 
-        <View style={styles.routeInfo}>
-          <Text style={styles.routeLabel}>Pickup</Text>
-          <Text style={styles.routeAddress}>{ride.pickup_address}</Text>
-          <Text style={styles.routeLabel}>Dropoff</Text>
-          <Text style={styles.routeAddress}>{ride.dropoff_address}</Text>
-        </View>
+        <GlassCard glow style={{ marginBottom: SPACING.base }}>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>Pickup</GradientText>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27, marginBottom: SPACING.sm }}>{ride.pickup_address}</GradientText>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>Dropoff</GradientText>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>{ride.dropoff_address}</GradientText>
+        </GlassCard>
 
-        <View style={styles.actions}>
+        <View style={{ flexDirection: 'row', gap: SPACING.md }}>
           {ride.status === 'accepted' && (
             <>
-              <TouchableOpacity style={styles.actionButton} onPress={markArrived}>
-                <Text style={styles.actionText}>Mark Arrived</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.chatButton} onPress={openChat}>
-                <Text style={styles.chatText}>Chat</Text>
-              </TouchableOpacity>
+              <GlowButton title="Mark Arrived" onPress={async () => { await rides.updateLocation(rideId, ride.pickup_latitude, ride.pickup_longitude); emit('driver:arrived', { rideId, riderId }); loadRide(); }} size="sm" style={{ flex: 1 }} />
+              <GlowButton title="Chat" onPress={() => navigation.navigate('Chat', { rideId, receiverId: riderId })} size="sm" glowColor={COLORS.info} style={{ flex: 1 }} />
             </>
           )}
           {ride.status === 'arrived' && (
-            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#10B981' }]} onPress={startRide}>
-              <Text style={[styles.actionText, { color: COLORS.white }]}>Start Ride</Text>
-            </TouchableOpacity>
+            <GlowButton title="Start Ride" onPress={() => { emit('ride:start', { rideId, otherUserId: riderId }); loadRide(); }} size="sm" />
           )}
           {ride.status === 'in_progress' && (
             <>
-              <TouchableOpacity style={[styles.actionButton, { backgroundColor: COLORS.primary }]} onPress={completeRide}>
-                <Text style={[styles.actionText, { color: COLORS.white }]}>Complete Ride</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.chatButton} onPress={openChat}>
-                <Text style={styles.chatText}>Chat</Text>
-              </TouchableOpacity>
+              <GlowButton title="Complete Ride" onPress={() => { emit('ride:complete', { rideId, otherUserId: riderId, fare: (ride as any)?.total_fare }); Alert.alert('Ride Completed', 'Great job!', [{ text: 'OK', onPress: () => navigation.navigate('Main') }]); }} size="sm" glowColor={COLORS.success} style={{ flex: 1 }} />
+              <GlowButton title="Chat" onPress={() => navigation.navigate('Chat', { rideId, receiverId: riderId })} size="sm" glowColor={COLORS.info} style={{ flex: 1 }} />
             </>
           )}
         </View>
@@ -128,28 +114,8 @@ export default function ActiveRideScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
   panel: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: COLORS.white, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, paddingBottom: 40,
+    backgroundColor: 'transparent', padding: SPACING.base, paddingBottom: 40,
   },
-  statusBadge: {
-    alignSelf: 'flex-start', backgroundColor: '#10B98120',
-    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, marginBottom: 16,
-  },
-  statusText: { color: '#10B981', fontSize: 14, fontWeight: '600' },
-  routeInfo: { marginBottom: 16 },
-  routeLabel: { fontSize: 12, color: COLORS.gray[400], marginBottom: 2 },
-  routeAddress: { fontSize: 14, color: COLORS.gray[700], marginBottom: 8 },
-  actions: { flexDirection: 'row', gap: 12 },
-  actionButton: {
-    flex: 1, backgroundColor: COLORS.gray[100], borderRadius: 12, padding: 16, alignItems: 'center',
-  },
-  actionText: { fontSize: 16, fontWeight: '600', color: COLORS.gray[700] },
-  chatButton: {
-    borderWidth: 2, borderColor: COLORS.primary, borderRadius: 12, padding: 16, alignItems: 'center',
-  },
-  chatText: { color: COLORS.primary, fontSize: 16, fontWeight: '600' },
 });

@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DriverProfile extends Model
@@ -11,6 +11,7 @@ class DriverProfile extends Model
     use HasUuids;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -29,6 +30,10 @@ class DriverProfile extends Model
             'is_approved' => 'boolean',
             'approved_at' => 'datetime',
             'total_earnings' => 'decimal:2',
+            'id_number' => 'encrypted',
+            'license_number' => 'encrypted',
+            'emergency_contact_name' => 'encrypted',
+            'emergency_contact_phone' => 'encrypted',
         ];
     }
 

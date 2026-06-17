@@ -5,69 +5,76 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Place\PlaceReverseRequest;
+use App\Http\Requests\Api\V1\Place\PlaceSearchRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class PlaceController extends Controller
 {
-    private const PLACES = [
-        ['id' => 'phalaborwa-cbd', 'name' => 'Phalaborwa CBD', 'lat' => -23.9470, 'lng' => 31.0830],
-        ['id' => 'kruger-gate', 'name' => 'Kruger National Park Gate', 'lat' => -23.9884, 'lng' => 31.5578],
-        ['id' => 'phalaborwa-airport', 'name' => 'Phalaborwa Airport', 'lat' => -23.9370, 'lng' => 31.1553],
-        ['id' => 'mall-phalaborwa', 'name' => 'Mall of Phalaborwa', 'lat' => -23.9400, 'lng' => 31.0900],
-        ['id' => 'burgersfort', 'name' => 'Burgersfort', 'lat' => -24.0267, 'lng' => 30.9500],
-        ['id' => 'hoedspruit', 'name' => 'Hoedspruit', 'lat' => -24.3517, 'lng' => 31.0433],
-        ['id' => 'tzaneen', 'name' => 'Tzaneen', 'lat' => -23.8333, 'lng' => 30.1667],
-        ['id' => 'mokopane', 'name' => 'Mokopane', 'lat' => -24.1833, 'lng' => 29.0167],
-        ['id' => 'polokwane', 'name' => 'Polokwane', 'lat' => -23.9045, 'lng' => 29.4689],
-        ['id' => 'giyani', 'name' => 'Giyani', 'lat' => -23.3022, 'lng' => 30.7189],
-    ];
-
-    public function search(Request $request): JsonResponse
+    public function search(PlaceSearchRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'q' => 'required|string|min:2|max:100',
-            'near' => 'nullable|string',
-            'limit' => 'nullable|integer|min:1|max:20',
-        ]);
+        $validated = $request->validated();
 
-        $query = mb_strtolower(trim($validated['q']));
-        $limit = (int) ($validated['limit'] ?? 8);
+        $query = trim($validated['query']);
+        $cacheKey = 'places:search:'.md5($query);
 
-        $matches = array_values(array_filter(
-            self::PLACES,
-            fn(array $place) => str_contains(mb_strtolower($place['name']), $query)
-        ));
+        $results = Cache::remember($cacheKey, 3600, function () use ($query) {
+            $response = Http::withHeaders(['User-Agent' => 'EasyRyde/1.0'])
+                ->timeout(5)
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $query,
+                    'format' => 'json',
+                    'limit' => 8,
+                ]);
 
-        usort($matches, function (array $a, array $b) use ($query) {
-            $scoreA = $this->matchScore($a['name'], $query);
-            $scoreB = $this->matchScore($b['name'], $query);
-            return $scoreB <=> $scoreA;
+            if (! $response->successful()) {
+                return [];
+            }
+
+            return collect($response->json())->map(fn (array $place) => [
+                'id' => (string) $place['osm_id'],
+                'name' => $place['display_name'],
+                'lat' => (float) $place['lat'],
+                'lng' => (float) $place['lon'],
+                'address' => $place['display_name'],
+            ])->toArray();
         });
-
-        $results = array_slice($matches, 0, $limit);
 
         return response()->json([
             'data' => $results,
             'meta' => [
-                'query' => $validated['q'],
+                'query' => $validated['query'],
                 'count' => count($results),
             ],
         ]);
     }
 
-    private function matchScore(string $name, string $query): int
+    public function reverse(PlaceReverseRequest $request): JsonResponse
     {
-        $nameLower = mb_strtolower($name);
-        if ($nameLower === $query) {
-            return 100;
+        $validated = $request->validated();
+
+        $response = Http::withHeaders(['User-Agent' => 'EasyRyde/1.0'])
+            ->timeout(5)
+            ->get('https://nominatim.openstreetmap.org/reverse', [
+                'lat' => $validated['lat'],
+                'lon' => $validated['lng'],
+                'format' => 'json',
+            ]);
+
+        if (! $response->successful()) {
+            return response()->json(['data' => null], 404);
         }
-        if (str_starts_with($nameLower, $query)) {
-            return 50;
-        }
-        if (str_contains($nameLower, $query)) {
-            return 10;
-        }
-        return 0;
+
+        $data = $response->json();
+
+        return response()->json([
+            'data' => [
+                'lat' => (float) $data['lat'],
+                'lng' => (float) $data['lon'],
+                'address' => $data['display_name'],
+            ],
+        ]);
     }
 }

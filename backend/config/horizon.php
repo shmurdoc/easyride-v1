@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\NewRideRequest;
 use Illuminate\Support\Str;
 
 return [
@@ -28,7 +29,7 @@ return [
     ],
 
     'silenced' => [
-        App\Events\NewRideRequest::class,
+        NewRideRequest::class,
     ],
 
     'environments' => [

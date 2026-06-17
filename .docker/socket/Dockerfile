@@ -1,0 +1,12 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY socket-server/package*.json ./
+RUN npm ci --only=production
+
+COPY socket-server/ .
+
+EXPOSE 6001
+
+CMD ["node", "server.js"]

@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\Wallet;
-use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SettlementService
 {
     private const DAILY_THRESHOLD = 200.00;
+
     private const MIN_PAYOUT = 50.00;
 
     public function __construct(
@@ -83,7 +83,7 @@ class SettlementService
             );
 
             DB::table('driver_payouts')->insert([
-                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'id' => (string) Str::uuid(),
                 'driver_id' => $driver->id,
                 'amount' => $payoutAmount,
                 'balance_before' => $balance,
@@ -136,7 +136,9 @@ class SettlementService
     public function markPayoutFailed(string $payoutId, string $reason = ''): bool
     {
         $payout = DB::table('driver_payouts')->where('id', $payoutId)->first();
-        if (!$payout) return false;
+        if (! $payout) {
+            return false;
+        }
 
         DB::table('driver_payouts')
             ->where('id', $payoutId)
@@ -166,6 +168,7 @@ class SettlementService
     public function canProcessPayout(User $driver): bool
     {
         $wallet = $this->walletService->getOrCreateWallet($driver);
+
         return (float) $wallet->balance >= self::MIN_PAYOUT;
     }
 }

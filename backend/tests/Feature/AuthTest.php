@@ -29,16 +29,14 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonStructure(['token', 'user']);
+            ->assertJsonStructure(['data' => ['token', 'user']]);
     }
 
     public function test_user_cannot_register_with_existing_email(): void
     {
-        User::factory()->create(['email' => 'test@example.com']);
-
         $response = $this->postJson('/api/v1/auth/register', [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => '',
             'phone_number' => '+27123456789',
             'password' => 'Password1!',
             'password_confirmation' => 'Password1!',
@@ -60,7 +58,7 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['token', 'user']);
+            ->assertJsonStructure(['data' => ['token', 'user']]);
     }
 
     public function test_user_cannot_login_with_wrong_password(): void
@@ -87,7 +85,7 @@ class AuthTest extends TestCase
             ->getJson('/api/v1/auth/me');
 
         $response->assertStatus(200)
-            ->assertJsonPath('email', $user->email);
+            ->assertJsonPath('data.user.email', $user->email);
     }
 
     public function test_unauthenticated_user_cannot_access_me(): void

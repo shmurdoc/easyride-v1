@@ -137,7 +137,7 @@ class UserConsentService
     public function hasAllRequiredConsents(User $user): bool
     {
         foreach (self::CONSENT_TYPES as $type => $config) {
-            if ($config['required'] && !$this->hasConsent($user, $type)) {
+            if ($config['required'] && ! $this->hasConsent($user, $type)) {
                 return false;
             }
         }
@@ -147,7 +147,7 @@ class UserConsentService
 
     private function validateConsentType(string $type): void
     {
-        if (!isset(self::CONSENT_TYPES[$type])) {
+        if (! isset(self::CONSENT_TYPES[$type])) {
             throw new \InvalidArgumentException("Invalid consent type: {$type}");
         }
     }

@@ -13,12 +13,15 @@ use Illuminate\Support\Str;
 class ReferralService
 {
     private const BONUS_AMOUNT = 25.00;
+
     private const MAX_REFERRALS_PER_MONTH = 50;
 
     public function generateCode(User $user): ReferralCode
     {
         $existing = ReferralCode::where('user_id', $user->id)->where('is_active', true)->first();
-        if ($existing) return $existing;
+        if ($existing) {
+            return $existing;
+        }
 
         do {
             $code = strtoupper(Str::random(8));
@@ -36,7 +39,7 @@ class ReferralService
             ->where('is_active', true)
             ->first();
 
-        if (!$referralCode) {
+        if (! $referralCode) {
             return ['success' => false, 'error' => 'Invalid referral code.'];
         }
 
@@ -50,7 +53,7 @@ class ReferralService
         }
 
         $referrer = User::find($referralCode->user_id);
-        if (!$referrer) {
+        if (! $referrer) {
             return ['success' => false, 'error' => 'Referrer not found.'];
         }
 
@@ -84,7 +87,9 @@ class ReferralService
             ->where('bonus_paid', false)
             ->first();
 
-        if (!$redemption) return;
+        if (! $redemption) {
+            return;
+        }
 
         $walletService = app(WalletService::class);
         $referrer = User::find($redemption->referrer_id);
@@ -108,7 +113,7 @@ class ReferralService
             self::BONUS_AMOUNT,
             'referral_bonus',
             $redemption->id,
-            "Welcome bonus for joining via referral",
+            'Welcome bonus for joining via referral',
         );
 
         $redemption->update([
@@ -127,7 +132,9 @@ class ReferralService
     public function getReferralStats(User $user): array
     {
         $code = $this->getUserCode($user);
-        if (!$code) return ['total_referrals' => 0, 'total_bonus' => 0];
+        if (! $code) {
+            return ['total_referrals' => 0, 'total_bonus' => 0];
+        }
 
         $redemptions = ReferralRedemption::where('referrer_id', $user->id)->get();
 

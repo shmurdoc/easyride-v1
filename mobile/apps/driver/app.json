@@ -4,27 +4,31 @@
     "slug": "easyryde-driver",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#10B981"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "za.co.easyryde.driver"
+      "bundleIdentifier": "za.co.easyryde.driver",
+      "config": {
+        "googleMapsApiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#10B981"
-      },
-      "package": "za.co.easyryde.driver"
+      "package": "za.co.easyryde.driver",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+        }
+      }
     },
     "plugins": [
-      "expo-location"
+      "expo-location",
+      [
+        "react-native-maps",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow EasyRyde to track your location for ride requests."
+        }
+      ]
     ]
   }
 }

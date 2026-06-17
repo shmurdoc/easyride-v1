@@ -2,16 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-use App\Models\Tenant;
-use App\Models\SystemSetting;
-use App\Models\Wallet;
 use App\Models\DriverProfile;
+use App\Models\SystemSetting;
+use App\Models\Tenant;
+use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\Wallet;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {

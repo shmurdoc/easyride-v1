@@ -2,71 +2,83 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\NewRideRequest;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Ride\FareEstimateRequest;
+use App\Http\Requests\Api\V1\Ride\RideApplyPromoRequest;
+use App\Http\Requests\Api\V1\Ride\RideCancelRequest;
+use App\Http\Requests\Api\V1\Ride\RideCreateRequest;
+use App\Http\Requests\Api\V1\Ride\RideRateRequest;
+use App\Http\Requests\Api\V1\Ride\UpdateLocationRequest;
 use App\Models\Ride;
-use App\Models\PromoCode;
+use App\Models\User;
 use App\Services\FareCalculationService;
-use App\Services\RideMatchingService;
 use App\Services\PaymentService;
-use App\Services\RatingService;
 use App\Services\PromoCodeService;
+use App\Services\RatingService;
+use App\Services\ReceiptService;
+use App\Services\RideMatchingService;
+use App\Services\RouteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class RideController extends Controller
 {
     public function __construct(
         protected FareCalculationService $fareCalculationService,
+        protected RouteService $routeService,
         protected RideMatchingService $rideMatchingService,
         protected PaymentService $paymentService,
         protected RatingService $ratingService,
         protected PromoCodeService $promoCodeService,
+        protected ReceiptService $receiptService,
     ) {}
 
     public function index(Request $request): JsonResponse
     {
         $rides = Ride::query()
-            ->when($request->status, fn($q, $v) => $q->where('status', $v))
-            ->when($request->category, fn($q, $v) => $q->where('category', $v))
-            ->when($request->from_date, fn($q, $v) => $q->whereDate('created_at', '>=', $v))
-            ->when($request->to_date, fn($q, $v) => $q->whereDate('created_at', '<=', $v))
-            ->when($request->user()->role === 'rider', fn($q) => $q->where('rider_id', $request->user()->id))
-            ->when($request->user()->role === 'driver', fn($q) => $q->where('driver_id', $request->user()->id))
+            ->when($request->status, fn ($q, $v) => $q->where('status', $v))
+            ->when($request->category, fn ($q, $v) => $q->where('category', $v))
+            ->when($request->from_date, fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
+            ->when($request->to_date, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
+            ->when($request->user()->role === 'rider', fn ($q) => $q->where('rider_id', $request->user()->id))
+            ->when($request->user()->role === 'driver', fn ($q) => $q->where('driver_id', $request->user()->id))
             ->latest()
             ->paginate($request->per_page ?? 15);
 
         return response()->json($rides);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(RideCreateRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'pickup_latitude' => 'required|numeric',
-            'pickup_longitude' => 'required|numeric',
-            'dropoff_latitude' => 'required|numeric',
-            'dropoff_longitude' => 'required|numeric',
-            'pickup_address' => 'required|string|max:255',
-            'dropoff_address' => 'required|string|max:255',
-            'category' => 'required|string|in:standard,premium,xl,delivery',
-        ]);
+        $validated = $request->validated();
 
         $fare = $this->fareCalculationService->calculate(
-            $validated['pickup_latitude'], $validated['pickup_longitude'],
-            $validated['dropoff_latitude'], $validated['dropoff_longitude'],
+            $validated['pickup_lat'], $validated['pickup_lng'],
+            $validated['dropoff_lat'], $validated['dropoff_lng'],
             $validated['category'],
         );
 
         $ride = Ride::create([
-            ...$validated,
+            'pickup_latitude' => $validated['pickup_lat'],
+            'pickup_longitude' => $validated['pickup_lng'],
+            'dropoff_latitude' => $validated['dropoff_lat'],
+            'dropoff_longitude' => $validated['dropoff_lng'],
+            'pickup_address' => $validated['pickup_address'],
+            'dropoff_address' => $validated['dropoff_address'],
+            'category' => $validated['category'],
+            'payment_method' => $validated['payment_method'],
+            'promo_code' => $validated['promo_code'] ?? null,
             'tenant_id' => $request->user()->tenant_id,
             'rider_id' => $request->user()->id,
             'status' => 'searching',
             ...$fare,
         ]);
 
-        Event::dispatch(new \App\Events\NewRideRequest($ride));
+        Event::dispatch(new NewRideRequest($ride));
 
         return response()->json($ride->load('rider'), 201);
     }
@@ -86,20 +98,23 @@ class RideController extends Controller
         );
     }
 
-    public function cancel(Request $request, Ride $ride): JsonResponse
+    public function cancel(RideCancelRequest $request, Ride $ride): JsonResponse
     {
         if ($ride->rider_id !== $request->user()->id && $ride->driver_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        if (!in_array($ride->status, ['searching', 'accepted', 'arrived'])) {
+        if (! in_array($ride->status, ['searching', 'accepted', 'arrived'])) {
             return response()->json(['message' => 'Ride cannot be cancelled.'], 422);
         }
+
+        $validated = $request->validated();
 
         $ride->update([
             'status' => 'cancelled',
             'cancelled_at' => now(),
             'cancelled_by' => $request->user()->id,
+            'cancellation_reason' => $validated['cancellation_reason'],
         ]);
 
         if ($ride->payment && $ride->payment->status === 'completed') {
@@ -109,7 +124,7 @@ class RideController extends Controller
         return response()->json($ride);
     }
 
-    public function rate(Request $request, Ride $ride): JsonResponse
+    public function rate(RideRateRequest $request, Ride $ride): JsonResponse
     {
         if ($ride->rider_id !== $request->user()->id) {
             return response()->json(['message' => 'Only the rider can rate.'], 403);
@@ -119,13 +134,10 @@ class RideController extends Controller
             return response()->json(['message' => 'Only completed rides can be rated.'], 422);
         }
 
-        $validated = $request->validate([
-            'score' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
-        $rater = \App\Models\User::find($request->user()->id);
-        $ratee = \App\Models\User::find($ride->driver_id);
+        $rater = User::find($request->user()->id);
+        $ratee = User::find($ride->driver_id);
 
         $rating = $this->ratingService->rateRide(
             $ride,
@@ -138,7 +150,7 @@ class RideController extends Controller
         return response()->json($rating, 201);
     }
 
-    public function applyPromo(Request $request, Ride $ride): JsonResponse
+    public function applyPromo(RideApplyPromoRequest $request, Ride $ride): JsonResponse
     {
         if ($ride->rider_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
@@ -148,7 +160,7 @@ class RideController extends Controller
             return response()->json(['message' => 'Promo code cannot be applied at this stage.'], 422);
         }
 
-        $validated = $request->validate(['code' => 'required|string']);
+        $validated = $request->validated();
 
         try {
             $promo = $this->promoCodeService->validateCode(
@@ -183,7 +195,7 @@ class RideController extends Controller
         $driver = $request->user();
         $result = $this->rideMatchingService->accept($ride, $driver);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json(['message' => $result['message']], 422);
         }
 
@@ -237,7 +249,7 @@ class RideController extends Controller
 
         $finalFare = $this->fareCalculationService->calculateFinalFare($ride);
 
-        DB::transaction(function () use ($ride, $finalFare, $request) {
+        DB::transaction(function () use ($ride, $finalFare) {
             $ride->update([
                 'status' => 'completed',
                 'total_fare' => $finalFare,
@@ -249,17 +261,36 @@ class RideController extends Controller
             $ride->driver->update(['current_ride_id' => null]);
         });
 
-        return response()->json($ride->fresh()->load('payment'));
+        return response()->json([
+            'ride' => $ride->fresh()->load('payment'),
+            'rating_required' => true,
+        ]);
     }
 
-    public function updateLocation(Request $request, Ride $ride): JsonResponse
+    public function receipt(Request $request, Ride $ride): BinaryFileResponse
+    {
+        if ($ride->rider_id !== $request->user()->id && $ride->driver_id !== $request->user()->id) {
+            abort(403, 'Unauthorized.');
+        }
+
+        if ($ride->status !== 'completed') {
+            abort(422, 'Ride is not completed.');
+        }
+
+        $path = $this->receiptService->generateReceipt($ride);
+        $fullPath = storage_path('app/public/'.$path);
+
+        return response()->file($fullPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="receipt_'.$ride->id.'.pdf"',
+        ]);
+    }
+
+    public function updateLocation(UpdateLocationRequest $request, Ride $ride): JsonResponse
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
+        $validated = $request->validated();
 
         $user->update([
             'current_latitude' => $validated['latitude'],
@@ -270,17 +301,48 @@ class RideController extends Controller
         return response()->json(['message' => 'Location updated.']);
     }
 
+    public function fareEstimate(FareEstimateRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $route = $this->routeService->getRoute(
+            (float) $validated['pickup_lat'],
+            (float) $validated['pickup_lng'],
+            (float) $validated['dropoff_lat'],
+            (float) $validated['dropoff_lng'],
+        );
+
+        $fare = $this->fareCalculationService->calculateFare(
+            $route['distance_km'],
+            $route['duration_minutes'],
+            $validated['category'] ?? 'standard',
+        );
+
+        return response()->json([
+            'distance_km' => $route['distance_km'],
+            'duration_minutes' => $route['duration_minutes'],
+            'breakdown' => [
+                'base_fare' => $fare['base_fare'],
+                'distance_fare' => $fare['distance_fare'],
+                'time_fare' => $fare['time_fare'],
+                'surge' => $fare['surge_multiplier'],
+                'subtotal' => $fare['subtotal'],
+                'total_fare' => $fare['total_fare'],
+            ],
+        ]);
+    }
+
     public function current(Request $request): JsonResponse
     {
         $ride = Ride::whereIn('status', ['searching', 'accepted', 'arrived', 'in_progress'])
             ->where(function ($q) use ($request) {
                 $q->where('rider_id', $request->user()->id)
-                  ->orWhere('driver_id', $request->user()->id);
+                    ->orWhere('driver_id', $request->user()->id);
             })
             ->latest()
             ->first();
 
-        if (!$ride) {
+        if (! $ride) {
             return response()->json(['message' => 'No active ride.'], 404);
         }
 

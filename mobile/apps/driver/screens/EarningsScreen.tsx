@@ -1,98 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { drivers } from '@easyryde/shared';
-import { COLORS, formatCurrency, formatDateTime } from '@easyryde/shared';
+import { View, FlatList, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { drivers, COLORS, GRADIENTS, SPACING, RADIUS, LoadingOverlay, GlassCard, AnimatedNumber, GradientText } from '@easyryde/shared';
 import type { WalletTransaction } from '@easyryde/shared';
 
 export default function EarningsScreen() {
   const [earnings, setEarnings] = useState({ total: 0, today: 0, pending: 0, trips: 0 });
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadEarnings();
-  }, []);
+  useEffect(() => { loadEarnings(); }, []);
 
   async function loadEarnings() {
     try {
       const data = await drivers.earnings();
-      setEarnings({
-        total: data.total_earnings,
-        today: data.today_earnings,
-        pending: data.pending_payout,
-        trips: data.total_trips,
-      });
+      setEarnings({ total: data.total_earnings, today: data.today_earnings, pending: data.pending_payout, trips: data.total_trips });
       setTransactions(data.recent_transactions);
-    } catch {}
+    } catch (err) { console.warn('Failed to load earnings:', err); } finally { setLoading(false); setRefreshing(false); }
   }
 
+  const onRefresh = React.useCallback(() => { setRefreshing(true); loadEarnings(); }, []);
+
+  if (loading) return <LoadingOverlay />;
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Earnings</Text>
+    <LinearGradient colors={[COLORS.bgGradientStart, COLORS.bgGradientEnd]} style={{ flex: 1 }}>
+      <LinearGradient colors={['rgba(212,175,55,0.15)', 'rgba(212,175,55,0)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: 60, paddingBottom: SPACING.lg, paddingHorizontal: SPACING.base }}>
+        <GradientText colors={GRADIENTS.primary} style={{ fontSize: 26, fontWeight: '700', lineHeight: 34, letterSpacing: -0.3 }}>Earnings</GradientText>
+      </LinearGradient>
 
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: '#10B981' }]}>
-          <Text style={styles.statValueWhite}>{formatCurrency(earnings.today)}</Text>
-          <Text style={styles.statLabelWhite}>Today</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{formatCurrency(earnings.total)}</Text>
-          <Text style={styles.statLabel}>All Time</Text>
-        </View>
+      <View style={{ flexDirection: 'row', padding: SPACING.base, gap: SPACING.md }}>
+        <GlassCard glow style={{ flex: 1, alignItems: 'center' }}>
+          <AnimatedNumber value={earnings.today} prefix="R " decimals={2} useGradient style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }} />
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>Today</GradientText>
+        </GlassCard>
+        <GlassCard glow style={{ flex: 1, alignItems: 'center' }}>
+          <AnimatedNumber value={earnings.total} prefix="R " decimals={2} useGradient style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }} />
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>All Time</GradientText>
+        </GlassCard>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{formatCurrency(earnings.pending)}</Text>
-          <Text style={styles.statLabel}>Pending Payout</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{earnings.trips}</Text>
-          <Text style={styles.statLabel}>Total Trips</Text>
-        </View>
+      <View style={{ flexDirection: 'row', paddingHorizontal: SPACING.base, gap: SPACING.md, marginBottom: SPACING.base }}>
+        <GlassCard style={{ flex: 1, alignItems: 'center' }}>
+          <AnimatedNumber value={earnings.pending} prefix="R " decimals={2} useGradient style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }} />
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>Pending</GradientText>
+        </GlassCard>
+        <GlassCard style={{ flex: 1, alignItems: 'center' }}>
+          <AnimatedNumber value={earnings.trips} useGradient style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }} />
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>Trips</GradientText>
+        </GlassCard>
       </View>
 
-      <Text style={styles.sectionTitle}>Recent Transactions</Text>
+      <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28, paddingHorizontal: SPACING.base, marginBottom: SPACING.sm }}>Recent Transactions</GradientText>
       <FlatList
         data={transactions}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: SPACING.base }}
+        ListEmptyComponent={<GradientText colors={GRADIENTS.primary} style={{ fontSize: 16, fontWeight: '400', lineHeight: 24, textAlign: 'center', marginTop: 40 }}>No transactions yet</GradientText>}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
-          <View style={styles.txRow}>
-            <View style={styles.txInfo}>
-              <Text style={styles.txDesc}>{item.description || item.type}</Text>
-              <Text style={styles.txDate}>{formatDateTime(item.created_at)}</Text>
+          <GlassCard style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm }}>
+            <View style={{ flex: 1 }}>
+              <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>{item.description || item.type}</GradientText>
+              <GradientText colors={GRADIENTS.primary} style={{ fontSize: 11, fontWeight: '400', lineHeight: 14 }}>{item.created_at}</GradientText>
             </View>
-            <Text style={[styles.txAmount, item.type === 'credit' ? styles.txCredit : styles.txDebit]}>
-              {item.type === 'credit' ? '+' : '-'}{formatCurrency(item.amount)}
-            </Text>
-          </View>
+            <GradientText colors={item.type === 'credit' ? GRADIENTS.primary : ['#FF3B5C', '#FF3B5C']} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>
+              {item.type === 'credit' ? '+' : '-'}R {item.amount.toFixed(2)}
+            </GradientText>
+          </GlassCard>
         )}
-        contentContainerStyle={styles.list}
       />
-    </View>
+    </LinearGradient>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.gray[800], padding: 24, paddingBottom: 8 },
-  statsRow: { flexDirection: 'row', padding: 24, paddingBottom: 0, gap: 12 },
-  statCard: {
-    flex: 1, backgroundColor: COLORS.white, borderRadius: 16, padding: 16, alignItems: 'center',
-  },
-  statValue: { fontSize: 18, fontWeight: 'bold', color: COLORS.gray[800] },
-  statValueWhite: { fontSize: 18, fontWeight: 'bold', color: COLORS.white },
-  statLabel: { fontSize: 12, color: COLORS.gray[400], marginTop: 4 },
-  statLabelWhite: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.gray[700], padding: 24, paddingBottom: 8 },
-  list: { paddingHorizontal: 24 },
-  txRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 8,
-  },
-  txInfo: { flex: 1 },
-  txDesc: { fontSize: 14, color: COLORS.gray[700] },
-  txDate: { fontSize: 12, color: COLORS.gray[400], marginTop: 2 },
-  txAmount: { fontSize: 16, fontWeight: '600' },
-  txCredit: { color: '#10B981' },
-  txDebit: { color: COLORS.danger },
-});

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Sos\SosResolveRequest;
+use App\Http\Requests\Api\V1\Sos\SosTriggerRequest;
 use App\Models\Ride;
 use App\Services\SosService;
 use Illuminate\Http\JsonResponse;
@@ -16,26 +18,18 @@ class SosController extends Controller
         protected SosService $sosService,
     ) {}
 
-    public function trigger(Request $request): JsonResponse
+    public function trigger(SosTriggerRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-            'ride_id' => 'nullable|string',
-            'notes' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
-        $ride = null;
-        if ($validated['ride_id'] ?? null) {
-            $ride = Ride::find($validated['ride_id']);
-        }
+        $ride = Ride::find($validated['ride_id']);
 
         $alert = $this->sosService->triggerSos(
             $request->user(),
             $ride,
             $validated['latitude'],
             $validated['longitude'],
-            $validated['notes'] ?? '',
+            $validated['alert_type'],
         );
 
         return response()->json([
@@ -49,7 +43,7 @@ class SosController extends Controller
     {
         $result = $this->sosService->cancelSos($request->user(), $id);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json($result, 422);
         }
 
@@ -58,32 +52,26 @@ class SosController extends Controller
 
     public function acknowledge(Request $request, string $id): JsonResponse
     {
-        if (!$request->user()->hasAnyRole(['admin', 'super-admin'])) {
+        if (! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         $result = $this->sosService->acknowledgeAlert($request->user(), $id, $request->input('notes', ''));
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json($result, 422);
         }
 
         return response()->json($result);
     }
 
-    public function resolve(Request $request, string $id): JsonResponse
+    public function resolve(SosResolveRequest $request, string $id): JsonResponse
     {
-        if (!$request->user()->hasAnyRole(['admin', 'super-admin'])) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
-        }
-
-        $validated = $request->validate([
-            'resolution' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $result = $this->sosService->resolveAlert($request->user(), $id, $validated['resolution']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json($result, 422);
         }
 
@@ -92,11 +80,12 @@ class SosController extends Controller
 
     public function active(Request $request): JsonResponse
     {
-        if (!$request->user()->hasAnyRole(['admin', 'super-admin'])) {
+        if (! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
         $alerts = $this->sosService->getActiveAlerts();
+
         return response()->json(['data' => iterator_to_array($alerts)]);
     }
 }

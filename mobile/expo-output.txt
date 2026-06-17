@@ -1,0 +1,2 @@
+﻿Starting project at F:\EasyRyde\mobile\apps\rider
+Starting Metro Bundler

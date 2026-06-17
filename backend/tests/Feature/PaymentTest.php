@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Payment;
 use App\Models\Ride;
+use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -60,7 +61,7 @@ class PaymentTest extends TestCase
         $rider = User::factory()->create();
         $rider->assignRole('rider');
 
-        $wallet = \App\Models\Wallet::create([
+        $wallet = Wallet::create([
             'user_id' => $rider->id,
             'balance' => 500.00,
         ]);

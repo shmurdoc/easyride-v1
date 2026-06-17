@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IncidentReport extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'reporter_id',
@@ -33,28 +34,47 @@ class IncidentReport extends Model
     ];
 
     const TYPE_ACCIDENT = 'accident';
+
     const TYPE_SAFETY_CONCERN = 'safety_concern';
+
     const TYPE_HARASSMENT = 'harassment';
+
     const TYPE_VEHICLE_DAMAGE = 'vehicle_damage';
+
     const TYPE_ROBBERY = 'robbery';
+
     const TYPE_MECHANICAL_FAILURE = 'mechanical_failure';
+
     const TYPE_ROUTE_DEVIATION = 'route_deviation';
+
     const TYPE_PAYMENT_ISSUE = 'payment_issue';
+
     const TYPE_DRIVER_MISCONDUCT = 'driver_misconduct';
+
     const TYPE_RIDER_MISCONDUCT = 'rider_misconduct';
+
     const TYPE_FOOD_SAFETY = 'food_safety';
+
     const TYPE_DELIVERY_DAMAGE = 'delivery_damage';
+
     const TYPE_OTHER = 'other';
 
     const SEVERITY_LOW = 'low';
+
     const SEVERITY_MEDIUM = 'medium';
+
     const SEVERITY_HIGH = 'high';
+
     const SEVERITY_CRITICAL = 'critical';
 
     const STATUS_OPEN = 'open';
+
     const STATUS_INVESTIGATING = 'investigating';
+
     const STATUS_RESOLVED = 'resolved';
+
     const STATUS_CLOSED = 'closed';
+
     const STATUS_ESCALATED = 'escalated';
 
     public function reporter(): BelongsTo

@@ -1,0 +1,61 @@
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp, NavigatorScreenParams } from '@react-navigation/native';
+
+// Rider Auth Navigation
+export type RiderAuthStackParamList = {
+  Login: undefined;
+  Register: undefined;
+};
+
+// Rider Tab Navigation
+export type RiderMainTabParamList = {
+  Home: { dropoff?: { id: string; name: string; lat: number; lng: number } } | undefined;
+  Activity: undefined;
+  Profile: undefined;
+};
+
+// Rider Main App Navigation
+export type RiderStackParamList = {
+  Main: NavigatorScreenParams<RiderMainTabParamList>;
+  BookRide: { pickup?: { lat: number; lng: number; address: string }; dropoff?: string };
+  RideTracking: { rideId: string };
+  Payment: { rideId: string };
+  RideHistory: undefined;
+  Chat: { rideId: string; receiverId: string };
+  RestaurantList: undefined;
+  RestaurantMenu: { restaurantId: string };
+  FoodCheckout: { restaurantId: string; restaurantName: string; cart: any[]; subtotal: number; deliveryFee: number };
+  FoodOrderTracking: { orderId: string };
+  Wallet: undefined;
+};
+
+// Driver App Navigation
+export type DriverStackParamList = {
+  Login: undefined;
+  Main: undefined;
+  RideRequests: undefined;
+  ActiveRide: { rideId: string; riderId: string };
+  Chat: { rideId: string; receiverId: string };
+  TripHistory: undefined;
+  Earnings: undefined;
+  Profile: undefined;
+  FoodDelivery: undefined;
+  FoodOrderDetail: { orderId: string };
+};
+
+// Admin App Navigation
+export type AdminStackParamList = {
+  Login: undefined;
+  Main: undefined;
+};
+
+// Navigation prop types
+export type RiderAuthNav = NativeStackNavigationProp<RiderAuthStackParamList>;
+export type RiderNav = NativeStackNavigationProp<RiderStackParamList>;
+export type DriverNav = NativeStackNavigationProp<DriverStackParamList>;
+export type AdminNav = NativeStackNavigationProp<AdminStackParamList>;
+
+// Route prop types
+export type RiderRoute<R extends keyof RiderStackParamList> = RouteProp<RiderStackParamList, R>;
+export type DriverRoute<R extends keyof DriverStackParamList> = RouteProp<DriverStackParamList, R>;
+export type AdminRoute<R extends keyof AdminStackParamList> = RouteProp<AdminStackParamList, R>;

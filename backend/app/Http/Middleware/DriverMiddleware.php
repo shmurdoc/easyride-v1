@@ -12,7 +12,7 @@ class DriverMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || !$request->user()->hasRole('driver')) {
+        if (! $request->user() || ! $request->user()->hasRole('driver')) {
             return response()->json(['message' => 'Forbidden. Driver access required.'], 403);
         }
 

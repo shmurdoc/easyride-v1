@@ -1,8 +1,8 @@
 <?php
 
+use Monolog\Handler\NullHandler;
 use Monolog\Handler\SentryHandler;
 use Monolog\Handler\StreamHandler;
-use Monolog\Handler\LogtailHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
@@ -62,7 +62,7 @@ return [
 
         'null' => [
             'driver' => 'monolog',
-            'handler' => Monolog\Handler\NullHandler::class,
+            'handler' => NullHandler::class,
         ],
 
         'emergency' => [

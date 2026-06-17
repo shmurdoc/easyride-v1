@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Partner\OrderStatusRequest;
+use App\Models\Delivery;
 use App\Services\PartnerApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +21,7 @@ class PartnerWebhookController extends Controller
     {
         $delivery = $this->partnerService->receiveOrder($request->all());
 
-        if (!$delivery) {
+        if (! $delivery) {
             return response()->json(['message' => 'Invalid webhook or order creation failed.'], 422);
         }
 
@@ -30,16 +32,13 @@ class PartnerWebhookController extends Controller
         ], 201);
     }
 
-    public function orderStatus(Request $request): JsonResponse
+    public function orderStatus(OrderStatusRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'order_id' => 'required|string',
-            'status' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
-        $delivery = \App\Models\Delivery::where('partner_reference', $validated['order_id'])->first();
+        $delivery = Delivery::where('partner_reference', $validated['order_id'])->first();
 
-        if (!$delivery) {
+        if (! $delivery) {
             return response()->json(['message' => 'Order not found.'], 404);
         }
 

@@ -43,12 +43,6 @@ services:
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_KEY: ${APP_KEY:?APP_KEY not set}
       APP_URL: ${APP_URL:-http://localhost:8000}
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: easyryde
-      DB_USERNAME: easyryde
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       REDIS_HOST: redis
       REDIS_PASSWORD: null
       SESSION_DRIVER: redis

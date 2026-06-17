@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Rating\RatingCreateRequest;
 use App\Models\Rating;
 use App\Models\Ride;
 use App\Models\User;
@@ -38,14 +39,9 @@ class RatingController extends Controller
         return response()->json($ratings);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(RatingCreateRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'ride_id' => 'required|string|exists:rides,id',
-            'ratee_id' => 'required|string|exists:users,id',
-            'score' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $ride = Ride::findOrFail($validated['ride_id']);
 
@@ -53,7 +49,7 @@ class RatingController extends Controller
             return response()->json(['message' => 'You did not participate in this ride.'], 403);
         }
 
-        if (!$ride->completed_at) {
+        if (! $ride->completed_at) {
             return response()->json(['message' => 'Cannot rate a ride that is not completed.'], 422);
         }
 

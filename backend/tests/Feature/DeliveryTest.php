@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Delivery;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -53,6 +54,7 @@ class DeliveryTest extends TestCase
         $rider->assignRole('rider');
 
         Delivery::create([
+            'tenant_id' => $rider->tenant_id,
             'sender_id' => $rider->id,
             'status' => 'delivered',
             'pickup_latitude' => -23.9468,
@@ -83,6 +85,7 @@ class DeliveryTest extends TestCase
         Sanctum::actingAs($driver);
 
         Delivery::create([
+            'tenant_id' => Tenant::factory()->create()->id,
             'sender_id' => User::factory()->create()->id,
             'status' => 'pending',
             'pickup_latitude' => -23.9468,
@@ -123,6 +126,7 @@ class DeliveryTest extends TestCase
         $rider->assignRole('rider');
 
         $delivery = Delivery::create([
+            'tenant_id' => $rider->tenant_id,
             'sender_id' => $rider->id,
             'status' => 'pending',
             'pickup_latitude' => -23.9468,
@@ -150,6 +154,7 @@ class DeliveryTest extends TestCase
         $driver->assignRole('driver');
 
         $delivery = Delivery::create([
+            'tenant_id' => Tenant::factory()->create()->id,
             'sender_id' => User::factory()->create()->id,
             'status' => 'pending',
             'pickup_latitude' => -23.9468,

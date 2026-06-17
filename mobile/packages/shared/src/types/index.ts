@@ -1,3 +1,5 @@
+export * from './navigation';
+
 export interface User {
   id: string;
   tenant_id: string;
@@ -69,6 +71,7 @@ export interface Ride {
   payment_method?: string;
   payment_status?: string;
   driver_eta?: number;
+  route_polyline?: string;
   started_at?: string;
   completed_at?: string;
   cancelled_at?: string;
@@ -249,4 +252,83 @@ export interface PaginatedResponse<T> {
 export interface ApiResponse<T> {
   data?: T;
   message?: string;
+}
+
+export interface Restaurant {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  cuisine_type?: string;
+  rating: number;
+  estimated_delivery_minutes: number;
+  delivery_fee: number;
+  min_order_amount: number;
+  is_active: boolean;
+  address?: string;
+  cover_image?: string;
+  categories?: RestaurantCategory[];
+}
+
+export interface RestaurantCategory {
+  id: string;
+  name: string;
+  items: MenuItem[];
+}
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  is_vegetarian: boolean;
+  is_vegan: boolean;
+  spice_level: number;
+  image?: string;
+}
+
+export interface CartItem {
+  menuItem: MenuItem;
+  quantity: number;
+  specialInstructions?: string;
+}
+
+export interface FoodOrder {
+  id: string;
+  tenant_id: string;
+  restaurant_id: string;
+  customer_id: string;
+  driver_id?: string;
+  status: FoodOrderStatus;
+  items: FoodOrderItem[];
+  delivery_address: string;
+  delivery_latitude?: number;
+  delivery_longitude?: number;
+  delivery_notes?: string;
+  payment_method: string;
+  payment_status: string;
+  subtotal: number;
+  delivery_fee: number;
+  service_fee: number;
+  tip_amount: number;
+  total_amount: number;
+  restaurant?: Restaurant;
+  customer?: User;
+  driver?: User;
+  created_at: string;
+  updated_at: string;
+}
+
+export type FoodOrderStatus =
+  | 'pending' | 'confirmed' | 'preparing' | 'ready'
+  | 'picked_up' | 'in_transit' | 'delivered' | 'cancelled';
+
+export interface FoodOrderItem {
+  id: string;
+  order_id: string;
+  menu_item_id: string;
+  name: string;
+  quantity: number;
+  line_total: number;
+  special_instructions?: string;
 }

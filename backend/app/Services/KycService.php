@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\DocumentNotFoundException;
+use App\Exceptions\KycAlreadyApprovedException;
+use App\Exceptions\KycAlreadySubmittedException;
 use App\Models\KycVerification;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,14 +43,14 @@ class KycService
             ->first();
 
         if ($existing && $existing->status !== KycVerification::STATUS_EXPIRED) {
-            throw new \App\Exceptions\KycAlreadySubmittedException(
+            throw new KycAlreadySubmittedException(
                 'Verification already submitted for this document type'
             );
         }
 
-        $frontPath = $documentFront ? $documentFront->store('kyc/' . $user->id, 'private') : null;
-        $backPath = $documentBack ? $documentBack->store('kyc/' . $user->id, 'private') : null;
-        $selfiePath = $selfie ? $selfie->store('kyc/' . $user->id, 'private') : null;
+        $frontPath = $documentFront ? $documentFront->store('kyc/'.$user->id, 'private') : null;
+        $backPath = $documentBack ? $documentBack->store('kyc/'.$user->id, 'private') : null;
+        $selfiePath = $selfie ? $selfie->store('kyc/'.$user->id, 'private') : null;
 
         return KycVerification::create([
             'user_id' => $user->id,
@@ -68,7 +72,7 @@ class KycService
     public function approveVerification(KycVerification $verification, int $adminId): void
     {
         if ($verification->status === KycVerification::STATUS_APPROVED) {
-            throw new \App\Exceptions\KycAlreadyApprovedException('Verification already approved');
+            throw new KycAlreadyApprovedException('Verification already approved');
         }
 
         $verification->approve($adminId);
@@ -81,7 +85,7 @@ class KycService
         $verification->reject($reason, $adminId);
     }
 
-    public function getPendingVerifications(): \Illuminate\Database\Eloquent\Collection
+    public function getPendingVerifications(): Collection
     {
         return KycVerification::where('status', KycVerification::STATUS_PENDING)
             ->with('user')
@@ -89,7 +93,7 @@ class KycService
             ->get();
     }
 
-    public function getUserVerifications(User $user): \Illuminate\Database\Eloquent\Collection
+    public function getUserVerifications(User $user): Collection
     {
         return KycVerification::where('user_id', $user->id)
             ->orderByDesc('created_at')
@@ -135,8 +139,8 @@ class KycService
             default => throw new \InvalidArgumentException('Invalid document type'),
         };
 
-        if (!$path || !Storage::disk('private')->exists($path)) {
-            throw new \App\Exceptions\DocumentNotFoundException('Document not found');
+        if (! $path || ! Storage::disk('private')->exists($path)) {
+            throw new DocumentNotFoundException('Document not found');
         }
 
         return Storage::disk('private')->download($path);
@@ -145,7 +149,7 @@ class KycService
     private function updateDriverVerificationStatus(int $userId): void
     {
         $user = User::find($userId);
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -167,7 +171,7 @@ class KycService
             KycVerification::TYPE_PSV_LICENSE,
         ];
 
-        if (!in_array($type, $validTypes)) {
+        if (! in_array($type, $validTypes)) {
             throw new \InvalidArgumentException("Invalid document type: {$type}");
         }
     }
@@ -178,20 +182,20 @@ class KycService
 
         switch ($documentType) {
             case KycVerification::TYPE_ID_DOCUMENT:
-                if (!preg_match('/^\d{13}$/', $number)) {
+                if (! preg_match('/^\d{13}$/', $number)) {
                     throw new \InvalidArgumentException('Invalid South African ID number (must be 13 digits)');
                 }
                 $this->validateSaIdNumber($number);
                 break;
 
             case KycVerification::TYPE_DRIVERS_LICENSE:
-                if (!preg_match('/^\d{13}$/', $number)) {
+                if (! preg_match('/^\d{13}$/', $number)) {
                     throw new \InvalidArgumentException('Invalid driver license number');
                 }
                 break;
 
             case KycVerification::TYPE_VEHICLE_REGISTRATION:
-                if (!preg_match('/^[A-Z]{2,3}\s?\d{3,4}\s?[A-Z]$/', strtoupper($number))) {
+                if (! preg_match('/^[A-Z]{2,3}\s?\d{3,4}\s?[A-Z]$/', strtoupper($number))) {
                     throw new \InvalidArgumentException('Invalid vehicle registration number');
                 }
                 break;
@@ -208,9 +212,9 @@ class KycService
         $month = substr($idNumber, 2, 2);
         $day = substr($idNumber, 4, 2);
 
-        $fullYear = ((int) $year < 50 ? '20' : '19') . $year;
+        $fullYear = ((int) $year < 50 ? '20' : '19').$year;
 
-        if (!checkdate((int) $month, (int) $day, (int) $fullYear)) {
+        if (! checkdate((int) $month, (int) $day, (int) $fullYear)) {
             throw new \InvalidArgumentException('Invalid date of birth in ID number');
         }
 

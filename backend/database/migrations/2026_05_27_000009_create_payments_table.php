@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('ride_id');
+            $table->uuid('ride_id')->nullable();
             $table->uuid('payer_id');
             $table->string('method', 30);
             $table->string('gateway', 30)->nullable();
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('ride_id')->references('id')->on('rides')->onDelete('cascade');
+            $table->foreign('ride_id')->references('id')->on('rides')->nullOnDelete();
             $table->foreign('payer_id')->references('id')->on('users')->onDelete('cascade');
             $table->index('status');
             $table->index(['gateway', 'gateway_reference']);

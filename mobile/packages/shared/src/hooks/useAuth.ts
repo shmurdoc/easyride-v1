@@ -21,6 +21,13 @@ export function useAuth() {
   });
 
   useEffect(() => {
+    api.setOnUnauthorized(() => {
+      api.clearToken();
+      SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {
+        if (__DEV__) console.warn('useAuth: Failed to clear token on unauthorized');
+      });
+      setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+    });
     loadStoredAuth();
   }, []);
 
@@ -28,21 +35,30 @@ export function useAuth() {
     try {
       const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
-        await api.setToken(token);
+        api.setToken(token);
         const user = await auth.me();
         setState({ user, token, isLoading: false, isAuthenticated: true });
       } else {
         setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       }
-    } catch {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+    } catch (err: unknown) {
+      const error = err as Error & { code?: string };
+      if (error.message?.includes('Network') || error.name === 'AbortError' || error.code === 'ERR_NETWORK') {
+        if (__DEV__) console.warn('Auth: Network error on startup, will retry later');
+        setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+      } else {
+        api.clearToken();
+        await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {
+          if (__DEV__) console.warn('useAuth: Failed to clear token on auth error');
+        });
+        setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+      }
     }
   }
 
   const login = useCallback(async (email: string, password: string) => {
     const { user, token } = await auth.login(email, password);
-    await api.setToken(token);
+    api.setToken(token);
     setState({ user, token, isLoading: false, isAuthenticated: true });
     return user;
   }, []);
@@ -52,7 +68,7 @@ export function useAuth() {
     password_confirmation: string; phone_number: string;
   }) => {
     const { user, token } = await auth.register(data);
-    await api.setToken(token);
+    api.setToken(token);
     setState({ user, token, isLoading: false, isAuthenticated: true });
     return user;
   }, []);
@@ -60,17 +76,23 @@ export function useAuth() {
   const logout = useCallback(async () => {
     try {
       await auth.logout();
-    } catch {} finally {
-      await api.setToken(null);
-      setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+    } catch {
+      if (__DEV__) console.warn('Auth: Logout API call failed');
     }
+    api.clearToken();
+    SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {
+      if (__DEV__) console.warn('useAuth: Failed to clear token on logout');
+    });
+    setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);
 
   const refreshUser = useCallback(async () => {
     try {
       const user = await auth.me();
       setState((prev) => ({ ...prev, user }));
-    } catch {}
+    } catch {
+      if (__DEV__) console.warn('Auth: Failed to refresh user');
+    }
   }, []);
 
   return { ...state, login, register, logout, refreshUser };

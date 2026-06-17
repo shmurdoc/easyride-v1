@@ -39,7 +39,7 @@ class EmailService
             }
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post(self::SENDGRID_API_URL, $payload);
 
@@ -52,9 +52,11 @@ class EmailService
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
+
             return false;
         } catch (\Exception $e) {
             Log::error('SendGrid email exception', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -75,13 +77,14 @@ class EmailService
             ];
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
             ])->post(self::SENDGRID_API_URL, $payload);
 
             return $response->successful();
         } catch (\Exception $e) {
             Log::error('SendGrid template email exception', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -135,6 +138,7 @@ class EmailService
     public function sendWeeklyEarningsReport(string $to, string $driverName, array $stats): bool
     {
         $html = $this->renderTemplate('weekly-earnings', array_merge($stats, ['driver_name' => $driverName]));
+
         return $this->send($to, 'EasyRyde - Weekly Earnings Report', $html);
     }
 
@@ -154,7 +158,7 @@ class EmailService
         $html = "<div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;'>";
         $html .= "<div style='background:#2563eb;color:white;padding:20px;border-radius:8px 8px 0 0;'>";
         $html .= "<h1 style='margin:0;font-size:24px;'>EasyRyde</h1>";
-        $html .= "</div>";
+        $html .= '</div>';
         $html .= "<div style='background:white;padding:20px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;'>";
 
         match ($template) {
@@ -164,12 +168,12 @@ class EmailService
             'password-reset' => $html .= $this->passwordResetHtml($data),
             'weekly-earnings' => $html .= $this->weeklyEarningsHtml($data),
             'sos-alert' => $html .= $this->sosAlertHtml($data),
-            default => $html .= '<p>' . ($data['message'] ?? '') . '</p>',
+            default => $html .= '<p>'.($data['message'] ?? '').'</p>',
         };
 
-        $html .= "</div>";
+        $html .= '</div>';
         $html .= "<p style='text-align:center;color:#9ca3af;font-size:12px;margin-top:20px;'>EasyRyde - Phalaborwa</p>";
-        $html .= "</div>";
+        $html .= '</div>';
 
         return $html;
     }
@@ -202,11 +206,12 @@ class EmailService
     {
         $status = $d['approved'] ? 'approved' : 'not approved';
         $color = $d['approved'] ? '#10B981' : '#EF4444';
+
         return "<h2>Application {$status}</h2>
             <p>Hi {$d['driver_name']},</p>
-            <p>Your driver application has been <strong style='color:{$color}'>{$status}</strong>.</p>" .
-            ($d['reason'] ? "<p>Reason: {$d['reason']}</p>" : '') .
-            ($d['approved'] ? "<p>You can now go online and start receiving rides.</p>" : '');
+            <p>Your driver application has been <strong style='color:{$color}'>{$status}</strong>.</p>".
+            ($d['reason'] ? "<p>Reason: {$d['reason']}</p>" : '').
+            ($d['approved'] ? '<p>You can now go online and start receiving rides.</p>' : '');
     }
 
     private function passwordResetHtml(array $d): string
@@ -237,8 +242,8 @@ class EmailService
             <div style='background:#FEF2F2;padding:12px;border-radius:6px;margin:12px 0;border-left:4px solid #EF4444;'>
                 <p><strong>Ride ID:</strong> {$d['ride_id']}</p>
                 <p><strong>Location:</strong> {$d['location']}</p>
-                <p><strong>Time:</strong> " . now()->format('Y-m-d H:i:s') . "</p>
+                <p><strong>Time:</strong> ".now()->format('Y-m-d H:i:s').'</p>
             </div>
-            <p>Please take immediate action.</p>";
+            <p>Please take immediate action.</p>';
     }
 }

@@ -7,11 +7,11 @@ namespace App\Services;
 use App\Models\Payment;
 use App\Models\Ride;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class RefundService
 {
     private const FULL_REFUND_WINDOW_MINUTES = 2;
+
     private const BOOKING_FEE = 15.00;
 
     public function __construct(
@@ -23,7 +23,7 @@ class RefundService
     {
         $payment = $ride->payment;
 
-        if (!$payment) {
+        if (! $payment) {
             return ['success' => false, 'error' => 'No payment found for this ride.'];
         }
 
@@ -68,7 +68,9 @@ class RefundService
         $payment = $ride->payment;
         $amount = (float) ($payment->amount ?? $ride->total_fare ?? 0);
 
-        if ($amount <= 0) return 0;
+        if ($amount <= 0) {
+            return 0;
+        }
 
         if ($reason === 'admin_override' || $reason === 'driver_no_show') {
             return $amount;
@@ -95,19 +97,22 @@ class RefundService
 
     public function isWithinFullRefundWindow(Ride $ride): bool
     {
-        if (!$ride->started_at) return false;
+        if (! $ride->started_at) {
+            return false;
+        }
+
         return $ride->started_at->diffInMinutes(now()) <= self::FULL_REFUND_WINDOW_MINUTES;
     }
 
     public function processDriverNoShowRefund(Ride $ride): array
     {
-        if (!$ride->driver) {
+        if (! $ride->driver) {
             return ['success' => false, 'error' => 'No driver assigned.'];
         }
 
         return DB::transaction(function () use ($ride) {
             $payment = $ride->payment;
-            if (!$payment) {
+            if (! $payment) {
                 return ['success' => false, 'error' => 'No payment.'];
             }
 

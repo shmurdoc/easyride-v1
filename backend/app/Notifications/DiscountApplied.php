@@ -14,8 +14,7 @@ class DiscountApplied extends Notification implements ShouldQueue
     public function __construct(
         protected PromoCode $promo,
         protected float $discount
-    )
-    {
+    ) {
         $this->onQueue('horizon');
     }
 
@@ -30,7 +29,7 @@ class DiscountApplied extends Notification implements ShouldQueue
             'promo_code' => $this->promo->code,
             'discount' => $this->discount,
             'type' => $this->promo->type,
-            'message' => 'Discount of ' . number_format($this->discount, 2) . ' applied with promo code ' . $this->promo->code,
+            'message' => 'Discount of '.number_format($this->discount, 2).' applied with promo code '.$this->promo->code,
         ];
     }
 }

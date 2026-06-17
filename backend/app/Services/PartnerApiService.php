@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Delivery;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -21,8 +22,9 @@ class PartnerApiService
 
     public function receiveOrder(array $payload): ?Delivery
     {
-        if (!$this->verifyWebhookSignature($payload)) {
+        if (! $this->verifyWebhookSignature($payload)) {
             Log::warning('Partner webhook: Invalid signature');
+
             return null;
         }
 
@@ -53,6 +55,7 @@ class PartnerApiService
             return $delivery;
         } catch (\Exception $e) {
             Log::error('Partner order creation failed', ['error' => $e->getMessage()]);
+
             return null;
         }
     }
@@ -61,7 +64,9 @@ class PartnerApiService
     {
         try {
             $delivery = Delivery::find($deliveryId);
-            if (!$delivery) return false;
+            if (! $delivery) {
+                return false;
+            }
 
             $payload = [
                 'order_id' => $delivery->partner_reference,
@@ -77,15 +82,16 @@ class PartnerApiService
             $signature = $this->generateSignature($payload);
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer '.$this->apiKey,
                 'X-Partner-Id' => $this->partnerId,
                 'X-Signature' => $signature,
                 'Content-Type' => 'application/json',
-            ])->post(self::PARTNER_API_URL . '/orders/status', $payload);
+            ])->post(self::PARTNER_API_URL.'/orders/status', $payload);
 
             return $response->successful();
         } catch (\Exception $e) {
             Log::error('Partner status update failed', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -110,14 +116,15 @@ class PartnerApiService
             $signature = $this->generateSignature($payload);
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer '.$this->apiKey,
                 'X-Partner-Id' => $this->partnerId,
                 'X-Signature' => $signature,
-            ])->post(self::PARTNER_API_URL . '/orders/driver-request', $payload);
+            ])->post(self::PARTNER_API_URL.'/orders/driver-request', $payload);
 
             return $response->successful();
         } catch (\Exception $e) {
             Log::error('Partner driver request failed', ['error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -136,9 +143,15 @@ class PartnerApiService
         $weightMultiplier = 1.0;
 
         $weight = $orderData['item_weight'] ?? 0;
-        if ($weight > 10) $weightMultiplier = 1.5;
-        if ($weight > 25) $weightMultiplier = 2.0;
-        if ($orderData['fragile'] ?? false) $weightMultiplier *= 1.2;
+        if ($weight > 10) {
+            $weightMultiplier = 1.5;
+        }
+        if ($weight > 25) {
+            $weightMultiplier = 2.0;
+        }
+        if ($orderData['fragile'] ?? false) {
+            $weightMultiplier *= 1.2;
+        }
 
         return round($baseFare + ($distance * $perKmRate * $weightMultiplier), 2);
     }
@@ -149,13 +162,14 @@ class PartnerApiService
         $dLat = deg2rad($lat2 - $lat1);
         $dLng = deg2rad($lng2 - $lng1);
         $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+
         return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     private function findOrCreatePartnerUser(array $customerData): string
     {
-        $email = $customerData['email'] ?? ('partner_' . ($customerData['phone'] ?? Str::random(8)) . '@phalaborwa-partner.local');
-        $user = \App\Models\User::firstOrCreate(
+        $email = $customerData['email'] ?? ('partner_'.($customerData['phone'] ?? Str::random(8)).'@phalaborwa-partner.local');
+        $user = User::firstOrCreate(
             ['email' => $email],
             [
                 'name' => $customerData['name'] ?? 'Partner Customer',
@@ -164,6 +178,7 @@ class PartnerApiService
                 'role' => 'rider',
             ]
         );
+
         return $user->id;
     }
 
@@ -183,9 +198,12 @@ class PartnerApiService
     public function verifyWebhookSignature(array $payload): bool
     {
         $signature = request()->header('X-Signature');
-        if (!$signature) return false;
+        if (! $signature) {
+            return false;
+        }
 
         $expectedSignature = $this->generateSignature($payload);
+
         return hash_equals($expectedSignature, $signature);
     }
 
@@ -193,6 +211,7 @@ class PartnerApiService
     {
         ksort($data);
         $payload = json_encode($data, JSON_UNESCAPED_SLASHES);
+
         return hash_hmac('sha256', $payload, $this->webhookSecret);
     }
 }

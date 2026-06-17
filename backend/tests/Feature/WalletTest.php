@@ -34,7 +34,7 @@ class WalletTest extends TestCase
         $response = $this->getJson('/api/v1/wallet');
 
         $response->assertStatus(200)
-            ->assertJsonPath('balance', 250.00);
+            ->assertJsonPath('balance', 250);
     }
 
     public function test_rider_can_get_transactions(): void
@@ -42,15 +42,17 @@ class WalletTest extends TestCase
         $rider = User::factory()->create();
         $rider->assignRole('rider');
 
-        Wallet::create([
+        $wallet = Wallet::create([
             'user_id' => $rider->id,
             'balance' => 100.00,
         ]);
 
         WalletTransaction::create([
-            'user_id' => $rider->id,
+            'wallet_id' => $wallet->id,
             'type' => 'credit',
             'amount' => 100.00,
+            'balance_before' => 0.0,
+            'balance_after' => 100.0,
             'description' => 'Deposit',
         ]);
 
@@ -74,7 +76,7 @@ class WalletTest extends TestCase
         Sanctum::actingAs($rider);
         $response = $this->postJson('/api/v1/wallet/deposit', [
             'amount' => 100.00,
-            'method' => 'payfast',
+            'payment_method' => 'payfast',
         ]);
 
         $response->assertStatus(200);
@@ -143,7 +145,7 @@ class WalletTest extends TestCase
         $rider = User::factory()->create();
         $rider->assignRole('rider');
 
-        Wallet::create([
+        $wallet = Wallet::create([
             'user_id' => $rider->id,
             'balance' => 0.0,
         ]);
@@ -151,13 +153,15 @@ class WalletTest extends TestCase
         Sanctum::actingAs($rider);
         $this->postJson('/api/v1/wallet/deposit', [
             'amount' => 100.00,
-            'method' => 'payfast',
+            'payment_method' => 'payfast',
         ]);
 
         $this->assertDatabaseHas('wallet_transactions', [
-            'user_id' => $rider->id,
+            'wallet_id' => $wallet->id,
             'type' => 'credit',
             'amount' => 100.00,
+            'balance_before' => 0.0,
+            'balance_after' => 100.0,
         ]);
     }
 
@@ -174,7 +178,7 @@ class WalletTest extends TestCase
         Sanctum::actingAs($rider);
         $response = $this->postJson('/api/v1/wallet/deposit', [
             'amount' => -50.00,
-            'method' => 'payfast',
+            'payment_method' => 'payfast',
         ]);
 
         $response->assertStatus(422);

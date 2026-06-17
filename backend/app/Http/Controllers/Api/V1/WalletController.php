@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Wallet\WalletDepositRequest;
+use App\Http\Requests\Api\V1\Wallet\WalletWithdrawRequest;
 use App\Models\Wallet;
 use App\Services\OzowService;
 use App\Services\PayFastService;
@@ -36,7 +38,7 @@ class WalletController extends Controller
     {
         $wallet = Wallet::where('user_id', $request->user()->id)->first();
 
-        if (!$wallet) {
+        if (! $wallet) {
             return response()->json(['data' => [], 'meta' => ['total' => 0]]);
         }
 
@@ -48,14 +50,9 @@ class WalletController extends Controller
         return response()->json($transactions);
     }
 
-    public function deposit(Request $request): JsonResponse
+    public function deposit(WalletDepositRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:1|max:50000',
-            'payment_method' => 'required|string|in:payfast,ozow',
-            'return_url' => 'nullable|string|url',
-            'cancel_url' => 'nullable|string|url',
-        ]);
+        $validated = $request->validated();
 
         $user = $request->user();
         $wallet = $this->walletService->getOrCreateWallet($user);
@@ -99,7 +96,7 @@ class WalletController extends Controller
                 ],
             ]);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json(['message' => $result['error'] ?? 'Ozow payment failed.'], 502);
             }
 
@@ -113,15 +110,13 @@ class WalletController extends Controller
         return response()->json(['message' => 'Invalid payment method.'], 422);
     }
 
-    public function withdraw(Request $request): JsonResponse
+    public function withdraw(WalletWithdrawRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:50|max:50000',
-        ]);
+        $validated = $request->validated();
 
         $wallet = $this->walletService->getOrCreateWallet($request->user());
 
-        if (!$this->walletService->hasSufficientFunds($wallet, (float) $validated['amount'])) {
+        if (! $this->walletService->hasSufficientFunds($wallet, (float) $validated['amount'])) {
             return response()->json([
                 'message' => 'Insufficient balance.',
                 'balance' => (float) $wallet->balance,

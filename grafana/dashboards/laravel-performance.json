@@ -1,0 +1,21 @@
+{
+  "title": "Laravel Performance",
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "title": "PHP-FPM Workers",
+      "type": "graph",
+      "targets": [{ "expr": "php_fpm_active_workers", "legendFormat": "active" }]
+    },
+    {
+      "title": "Database Connections",
+      "type": "graph",
+      "targets": [{ "expr": "pg_stat_database_numbackends", "legendFormat": "connections" }]
+    },
+    {
+      "title": "Memory Usage",
+      "type": "graph",
+      "targets": [{ "expr": "container_memory_usage_bytes{container_label_com_docker_compose_service=~\"php-fpm|postgres|redis\"}", "legendFormat": "{{container_label_com_docker_compose_service}}" }]
+    }
+  ]
+}

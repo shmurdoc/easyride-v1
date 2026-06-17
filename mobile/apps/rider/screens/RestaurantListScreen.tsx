@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Image } from 'react-native';
-import { foodDelivery } from '@easyryde/shared';
-import { COLORS, formatCurrency } from '@easyryde/shared';
-import type { Restaurant } from '@easyryde/shared';
+import { FlatList, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
+import { View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { foodDelivery, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { Typography, GlassCard, GradientText, Shimmer } from '@easyryde/shared';
+import type { Restaurant, RiderNav } from '@easyryde/shared';
 
-export default function RestaurantListScreen({ navigation }: any) {
+export default function RestaurantListScreen({ navigation }: { navigation: RiderNav }) {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -12,80 +14,74 @@ export default function RestaurantListScreen({ navigation }: any) {
   useEffect(() => { loadRestaurants(); }, []);
 
   async function loadRestaurants() {
-    try {
-      const params: Record<string, string> = { per_page: '50' };
-      if (search) params.search = search;
-      const data = await foodDelivery.restaurants(params);
-      setRestaurants(data.data);
-    } catch {} finally { setLoading(false); }
+    try { const params: Record<string, string> = { per_page: '50' }; if (search) params.search = search; const data = await foodDelivery.restaurants(params); setRestaurants(data.data); }
+    catch {} finally { setLoading(false); }
   }
 
-  const renderRestaurant = ({ item }: { item: Restaurant }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('RestaurantMenu', { restaurantId: item.id })}
-    >
-      <View style={styles.cardImage}>
-        <Text style={styles.cardImageText}>{item.name[0]}</Text>
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.cardName}>{item.name}</Text>
-        <Text style={styles.cardCuisine}>{item.cuisine_type || 'Restaurant'}</Text>
-        <View style={styles.cardMeta}>
-          <Text style={styles.rating}>⭐ {item.rating.toFixed(1)}</Text>
-          <Text style={styles.deliveryTime}>{item.estimated_delivery_minutes}min</Text>
-          <Text style={styles.deliveryFee}>
-            {item.delivery_fee > 0 ? formatCurrency(item.delivery_fee) : 'Free delivery'}
-          </Text>
+  if (loading) {
+    return (
+      <LinearGradient colors={GRADIENTS.background as unknown as string[]} style={{ flex: 1 }}>
+        <Typography variant="h2" style={{ padding: SPACING.base, paddingBottom: SPACING.sm }}>Food Delivery</Typography>
+        <View style={{ padding: SPACING.base, gap: SPACING.md }}>
+          {[1, 2, 3].map(i => (
+            <Shimmer key={i} height={100} borderRadius={RADIUS.xl} />
+          ))}
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </LinearGradient>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Food Delivery</Text>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search restaurants..."
-        value={search}
-        onChangeText={setSearch}
-        onSubmitEditing={loadRestaurants}
-      />
+    <LinearGradient colors={GRADIENTS.background as unknown as string[]} style={{ flex: 1 }}>
+      <Typography variant="h2" style={{ padding: SPACING.base, paddingBottom: SPACING.sm }}>Food Delivery</Typography>
+      <TextInput style={styles.searchInput} placeholder="Search restaurants..." placeholderTextColor={COLORS.textMuted} value={search} onChangeText={setSearch} onSubmitEditing={loadRestaurants} />
       <FlatList
         data={restaurants}
         keyExtractor={(item) => item.id}
-        renderItem={renderRestaurant}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={!loading ? <Text style={styles.empty}>No restaurants found</Text> : null}
+        contentContainerStyle={{ padding: SPACING.base }}
+        ListEmptyComponent={<Typography variant="body" color={COLORS.textMuted} style={{ textAlign: 'center', marginTop: 40 }}>No restaurants found</Typography>}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => navigation.navigate('RestaurantMenu', { restaurantId: item.id })}>
+            <GlassCard padding={0} style={{ marginBottom: SPACING.md }}>
+              <View style={{ flexDirection: 'row' }}>
+                <LinearGradient
+                  colors={GRADIENTS.surface as unknown as string[]}
+                  style={styles.restaurantThumb}
+                >
+                  <Typography variant="h2" color={COLORS.primary}>{item.name[0]}</Typography>
+                </LinearGradient>
+                <View style={{ flex: 1, marginLeft: SPACING.md, paddingVertical: SPACING.base }}>
+                  <Typography variant="body" style={{ fontWeight: '600' }}>{item.name}</Typography>
+                  <Typography variant="xs" color={COLORS.textMuted}>{item.cuisine_type || 'Restaurant'}</Typography>
+                  <View style={{ flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.sm }}>
+                    <GradientText colors={GRADIENTS.primary} style={{ fontSize: 13, fontWeight: '500' }}>
+                      {item.rating.toFixed(1)} ★
+                    </GradientText>
+                    <Typography variant="xs" color={COLORS.textMuted}>{item.estimated_delivery_minutes}min</Typography>
+                    <GradientText
+                      colors={item.delivery_fee > 0 ? GRADIENTS.primary : [COLORS.success, COLORS.success]}
+                      style={{ fontSize: 13, fontWeight: '500' }}
+                    >
+                      {item.delivery_fee > 0 ? `R${item.delivery_fee}` : 'Free'}
+                    </GradientText>
+                  </View>
+                </View>
+              </View>
+            </GlassCard>
+          </TouchableOpacity>
+        )}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.gray[800], padding: 24, paddingBottom: 8 },
   searchInput: {
-    margin: 24, marginBottom: 8, backgroundColor: COLORS.white, borderRadius: 12,
-    padding: 12, fontSize: 16, borderWidth: 1, borderColor: COLORS.gray[200],
+    margin: SPACING.base, backgroundColor: COLORS.glass, borderRadius: RADIUS.md,
+    padding: 12, fontSize: 16, borderWidth: 1, borderColor: COLORS.glassBorder, color: COLORS.text,
   },
-  list: { padding: 24 },
-  card: {
-    flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 16,
-    marginBottom: 12, overflow: 'hidden',
-  },
-  cardImage: {
-    width: 80, height: 80, backgroundColor: COLORS.primary + '20',
+  restaurantThumb: {
+    width: 80, height: 80, borderTopLeftRadius: RADIUS.xl, borderBottomLeftRadius: RADIUS.xl,
     justifyContent: 'center', alignItems: 'center',
   },
-  cardImageText: { fontSize: 28, fontWeight: 'bold', color: COLORS.primary },
-  cardContent: { flex: 1, padding: 12 },
-  cardName: { fontSize: 16, fontWeight: '600', color: COLORS.gray[800] },
-  cardCuisine: { fontSize: 13, color: COLORS.gray[400], marginTop: 2 },
-  cardMeta: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  rating: { fontSize: 13, color: COLORS.gray[600] },
-  deliveryTime: { fontSize: 13, color: COLORS.gray[500] },
-  deliveryFee: { fontSize: 13, color: '#10B981', fontWeight: '500' },
-  empty: { textAlign: 'center', color: COLORS.gray[400], marginTop: 40 },
 });

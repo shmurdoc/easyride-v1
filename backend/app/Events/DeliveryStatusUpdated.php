@@ -24,15 +24,15 @@ class DeliveryStatusUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('delivery:' . $this->delivery->id),
+            new Channel('delivery:'.$this->delivery->id),
             new Channel('admin'),
         ];
 
         if ($this->delivery->sender_id) {
-            $channels[] = new Channel('user:' . $this->delivery->sender_id);
+            $channels[] = new Channel('user:'.$this->delivery->sender_id);
         }
         if ($this->delivery->driver_id) {
-            $channels[] = new Channel('user:' . $this->delivery->driver_id);
+            $channels[] = new Channel('user:'.$this->delivery->driver_id);
         }
 
         return $channels;

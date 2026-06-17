@@ -1,85 +1,80 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { admin } from '@easyryde/shared';
-import { COLORS } from '@easyryde/shared';
+import { FlatList, StyleSheet, Alert, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { admin, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { Typography } from '@easyryde/shared';
+import { GlowButton } from '@easyryde/shared';
+import { GlassCard } from '@easyryde/shared';
+import { GradientText } from '@easyryde/shared';
+import { Shimmer } from '@easyryde/shared';
 import type { User } from '@easyryde/shared';
 
 export default function DriversScreen() {
   const [drivers, setDrivers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadDrivers(); }, []);
 
-  async function loadDrivers() {
-    try {
-      const data = await admin.drivers({ per_page: '50' });
-      setDrivers(data.data);
-    } catch {} finally { setLoading(false); }
+  async function loadDrivers() { try { const data = await admin.drivers({ per_page: '50' }); setDrivers(data.data); } catch (err) { console.warn('Failed to load drivers:', err); } finally { setLoading(false); setRefreshing(false); } }
+
+  const onRefresh = React.useCallback(() => { setRefreshing(true); loadDrivers(); }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <Typography variant="h2" style={{ padding: SPACING.base, paddingBottom: SPACING.sm }}>Drivers</Typography>
+        {[1, 2, 3].map((i) => (
+          <GlassCard key={i} style={{ marginHorizontal: SPACING.base, marginBottom: SPACING.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.sm }}>
+              <Shimmer width={120} height={20} />
+              <Shimmer width={16} height={16} borderRadius={8} />
+            </View>
+            <Shimmer width="80%" height={14} style={{ marginBottom: SPACING.xs }} />
+            <Shimmer width="60%" height={14} style={{ marginBottom: SPACING.md }} />
+            <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+              <Shimmer style={{ flex: 1 }} height={40} borderRadius={RADIUS.md} />
+              <Shimmer style={{ flex: 1 }} height={40} borderRadius={RADIUS.md} />
+            </View>
+          </GlassCard>
+        ))}
+      </View>
+    );
   }
 
-  const approveDriver = async (id: string) => {
-    try {
-      await admin.approveDriver(id);
-      Alert.alert('Approved', 'Driver approved');
-      loadDrivers();
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    }
-  };
-
-  const rejectDriver = async (id: string) => {
-    try {
-      await admin.rejectDriver(id);
-      Alert.alert('Rejected', 'Driver rejected');
-      loadDrivers();
-    } catch (err: any) {
-      Alert.alert('Error', err.message);
-    }
-  };
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Drivers</Text>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <LinearGradient colors={['rgba(212,175,55,0.1)', 'rgba(0,0,0,0)']} style={styles.header}>
+        <Typography variant="h2">Drivers</Typography>
+      </LinearGradient>
       <FlatList
         data={drivers}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: SPACING.base }}
+        ListEmptyComponent={<Typography variant="body" color={COLORS.textDim} style={{ textAlign: 'center', marginTop: 40 }}>No drivers found</Typography>}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.name}>{item.name}</Text>
-              <View style={[styles.statusDot, { backgroundColor: item.is_active ? '#10B981' : COLORS.gray[300] }]} />
+          <GlassCard glow glowColor={item.is_active ? COLORS.successGlow : COLORS.primaryGlow} style={{ marginBottom: SPACING.sm }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xs }}>
+              <GradientText colors={GRADIENTS.primary} style={styles.driverName}>{item.name}</GradientText>
+              <View style={[styles.statusDot, { backgroundColor: item.is_active ? COLORS.success : COLORS.textMuted }]} />
             </View>
-            <Text style={styles.email}>{item.email}</Text>
-            <Text style={styles.phone}>{item.phone_number}</Text>
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.approveButton} onPress={() => approveDriver(item.id)}>
-                <Text style={styles.approveText}>Approve</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.rejectButton} onPress={() => rejectDriver(item.id)}>
-                <Text style={styles.rejectText}>Reject</Text>
-              </TouchableOpacity>
+            <Typography variant="small" color={COLORS.textMuted}>{item.email}</Typography>
+            <Typography variant="small" color={COLORS.textMuted} style={{ marginBottom: SPACING.md }}>{item.phone_number}</Typography>
+            <View style={{ flexDirection: 'row', gap: SPACING.md }}>
+              <GlowButton title="Approve" onPress={async () => { try { await admin.approveDriver(item.id); Alert.alert('Approved', 'Driver approved'); loadDrivers(); } catch (err: any) { Alert.alert('Error', err.message); } }} size="sm" glowColor={COLORS.success} style={{ flex: 1 }} />
+              <GlowButton title="Reject" onPress={async () => { try { await admin.rejectDriver(item.id); Alert.alert('Rejected', 'Driver rejected'); loadDrivers(); } catch (err: any) { Alert.alert('Error', err.message); } }} size="sm" glowColor={COLORS.error} style={{ flex: 1 }} />
             </View>
-          </View>
+          </GlassCard>
         )}
-        contentContainerStyle={styles.list}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.gray[800], padding: 24, paddingBottom: 8 },
-  list: { padding: 24 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 8 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  name: { fontSize: 16, fontWeight: '600', color: COLORS.gray[800] },
-  statusDot: { width: 10, height: 10, borderRadius: 5 },
-  email: { fontSize: 14, color: COLORS.gray[500] },
-  phone: { fontSize: 13, color: COLORS.gray[400], marginBottom: 12 },
-  actions: { flexDirection: 'row', gap: 12 },
-  approveButton: { backgroundColor: '#10B981', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
-  approveText: { color: COLORS.white, fontWeight: '600' },
-  rejectButton: { borderWidth: 1, borderColor: COLORS.gray[300], borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
-  rejectText: { color: COLORS.gray[600] },
+  header: { paddingTop: SPACING['2xl'], paddingBottom: SPACING.sm, paddingHorizontal: SPACING.base },
+  driverName: { fontSize: 18, fontWeight: '600' },
+  statusDot: { width: 12, height: 12, borderRadius: 6 },
 });

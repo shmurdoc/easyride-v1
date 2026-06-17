@@ -48,7 +48,7 @@ class SosService
             ->where('status', 'active')
             ->first();
 
-        if (!$alert) {
+        if (! $alert) {
             return ['success' => false, 'error' => 'Alert not found or already resolved.'];
         }
 
@@ -73,7 +73,7 @@ class SosService
             ->where('status', 'active')
             ->first();
 
-        if (!$alert) {
+        if (! $alert) {
             return ['success' => false, 'error' => 'Alert not found or already handled.'];
         }
 
@@ -93,7 +93,7 @@ class SosService
             ->whereIn('status', ['active', 'acknowledged'])
             ->first();
 
-        if (!$alert) {
+        if (! $alert) {
             return ['success' => false, 'error' => 'Alert not found.'];
         }
 
@@ -123,7 +123,7 @@ class SosService
         foreach ($admins as $admin) {
             $pushService->sendToDevice($admin, [
                 'title' => 'SOS ALERT',
-                'body' => "Emergency from {$user->name}" . ($ride ? " on ride #{$ride->id}" : ''),
+                'body' => "Emergency from {$user->name}".($ride ? " on ride #{$ride->id}" : ''),
                 'channel' => 'easyryde_sos',
             ], [
                 'type' => 'sos',

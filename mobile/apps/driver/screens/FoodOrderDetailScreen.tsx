@@ -1,160 +1,69 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
-import { foodDelivery, COLORS, formatCurrency, useSocket } from '@easyryde/shared';
-import type { FoodOrder } from '@easyryde/shared';
+import { View, ScrollView, StyleSheet, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { foodDelivery, COLORS, GRADIENTS, SPACING, RADIUS, Badge, LoadingOverlay, GlassCard, GlowButton, GradientText } from '@easyryde/shared';
+import type { FoodOrder, DriverRoute } from '@easyryde/shared';
 
-const STATUS_TRANSITIONS: Record<string, string[]> = {
-  confirmed: ['preparing'],
-  preparing: ['ready'],
-  ready: ['picked_up'],
-  picked_up: ['in_transit'],
-  in_transit: ['delivered'],
-  pending: ['confirmed', 'cancelled'],
-};
+const TRANSITIONS: Record<string, string[]> = { confirmed: ['preparing'], preparing: ['ready'], ready: ['picked_up'], picked_up: ['in_transit'], in_transit: ['delivered'], pending: ['confirmed', 'cancelled'] };
+const ACTIONS: Record<string, string> = { confirmed: 'Start Preparing', preparing: 'Mark as Ready', ready: 'Mark as Picked Up', picked_up: 'Start Delivery', in_transit: 'Mark as Delivered' };
 
-const STATUS_ACTIONS: Record<string, string> = {
-  confirmed: 'Start Preparing',
-  preparing: 'Mark as Ready',
-  ready: 'Mark as Picked Up',
-  picked_up: 'Start Delivery',
-  in_transit: 'Mark as Delivered',
-};
-
-export default function FoodOrderDetailScreen({ route, navigation }: any) {
+export default function FoodOrderDetailScreen({ route }: { route: DriverRoute<'FoodOrderDetail'> }) {
   const { orderId } = route.params;
   const [order, setOrder] = useState<FoodOrder | null>(null);
-  const { socket } = useSocket();
 
-  const loadOrder = useCallback(async () => {
-    try { setOrder(await foodDelivery.getOrder(orderId)); }
-    catch {}
-  }, [orderId]);
+  const loadOrder = useCallback(async () => { try { setOrder(await foodDelivery.getOrder(orderId)); } catch {} }, [orderId]);
 
-  useEffect(() => {
-    loadOrder();
-    const interval = setInterval(loadOrder, 10000);
-    return () => clearInterval(interval);
-  }, [loadOrder]);
+  useEffect(() => { loadOrder(); const interval = setInterval(loadOrder, 10000); return () => clearInterval(interval); }, [loadOrder]);
 
-  useEffect(() => {
-    if (!socket) return;
-    socket.emit('join', { channel: `food-order.${orderId}` });
-    socket.on('food:status-update', (data: { order_id: string }) => {
-      if (data.order_id === orderId) loadOrder();
-    });
-    return () => {
-      socket.off('food:status-update');
-      socket.emit('leave', { channel: `food-order.${orderId}` });
-    };
-  }, [socket, orderId, loadOrder]);
+  const updateStatus = async (newStatus: string) => { try { await foodDelivery.updateOrderStatus(orderId, newStatus); loadOrder(); } catch (err: any) { Alert.alert('Error', err.message || 'Failed'); } };
 
-  const updateStatus = async (newStatus: string) => {
-    try {
-      await foodDelivery.updateOrderStatus(orderId, newStatus);
-      loadOrder();
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to update status');
-    }
-  };
+  if (!order) return <LoadingOverlay />;
 
-  const nextStatus = (STATUS_TRANSITIONS[order?.status || ''] || [])[0];
+  const nextStatus = (TRANSITIONS[order.status] || [])[0];
   const canUpdate = !!nextStatus;
 
-  if (!order) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.loading}>Loading order...</Text>
-      </View>
-    );
-  }
-
-  const isDelivered = order.status === 'delivered';
-  const isCancelled = order.status === 'cancelled';
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.restaurantName}>{order.restaurant?.name}</Text>
-        <View style={[styles.statusBadge, isCancelled && styles.statusBadgeCancelled, isDelivered && styles.statusBadgeDelivered]}>
-          <Text style={styles.statusText}>{order.status}</Text>
+    <LinearGradient colors={[COLORS.bgGradientStart, COLORS.bgGradientEnd]} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: SPACING.base }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg }}>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 26, fontWeight: '700', lineHeight: 34, letterSpacing: -0.3, flex: 1 }}>{order.restaurant?.name}</GradientText>
+          <Badge label={order.status} variant={order.status === 'delivered' ? 'success' : order.status === 'cancelled' ? 'error' : 'info'} />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Items</Text>
-        {order.items?.map((item) => (
-          <View key={item.id} style={styles.itemRow}>
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{item.quantity}x {item.name}</Text>
-              {item.special_instructions && (
-                <Text style={styles.itemNote}>Note: {item.special_instructions}</Text>
-              )}
+        <GlassCard glow style={{ marginBottom: SPACING.base }}>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28, marginBottom: SPACING.md }}>Order Items</GradientText>
+          {order.items?.map((item) => (
+            <View key={item.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: SPACING.xs }}>
+              <View style={{ flex: 1 }}>
+                <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>{item.quantity}x {item.name}</GradientText>
+                {item.special_instructions && <GradientText colors={GRADIENTS.primary} style={{ fontSize: 13, fontWeight: '400', lineHeight: 18, fontStyle: 'italic' }}>Note: {item.special_instructions}</GradientText>}
+              </View>
+              <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>R {item.line_total.toFixed(2)}</GradientText>
             </View>
-            <Text style={styles.itemPrice}>{formatCurrency(item.line_total)}</Text>
+          ))}
+        </GlassCard>
+
+        <GlassCard glow style={{ marginBottom: SPACING.base }}>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28, marginBottom: SPACING.md }}>Delivery Details</GradientText>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>{order.delivery_address}</GradientText>
+          {order.delivery_notes && <GradientText colors={GRADIENTS.primary} style={{ fontSize: 13, fontWeight: '400', lineHeight: 18 }}>{order.delivery_notes}</GradientText>}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.md }}>
+            <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }}>Total</GradientText>
+            <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }}>R {order.total_amount.toFixed(2)}</GradientText>
           </View>
-        ))}
-      </View>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 13, fontWeight: '400', lineHeight: 18 }}>{order.payment_method}</GradientText>
+        </GlassCard>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Delivery Details</Text>
-        <Text style={styles.detailText}>📍 {order.delivery_address}</Text>
-        {order.delivery_notes && <Text style={styles.detailText}>📝 {order.delivery_notes}</Text>}
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>{formatCurrency(order.total_amount)}</Text>
-        </View>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Payment</Text>
-          <Text style={styles.totalValue}>{order.payment_method}</Text>
-        </View>
-      </View>
+        <GlassCard glow style={{ marginBottom: SPACING.base }}>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28, marginBottom: SPACING.md }}>Customer</GradientText>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>{order.customer?.name || 'Unknown'}</GradientText>
+          <GradientText colors={GRADIENTS.primary} style={{ fontSize: 13, fontWeight: '400', lineHeight: 18 }}>{order.customer?.phone_number || 'N/A'}</GradientText>
+        </GlassCard>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Customer</Text>
-        <Text style={styles.detailText}>👤 {order.customer?.name || 'Unknown'}</Text>
-        <Text style={styles.detailText}>📞 {order.customer?.phone_number || 'N/A'}</Text>
-      </View>
-
-      {canUpdate && (
-        <TouchableOpacity
-          style={styles.updateButton}
-          onPress={() => {
-            Alert.alert('Update Status', `${STATUS_ACTIONS[order.status] || 'Update to'} "${nextStatus}"?`, [
-              { text: 'Cancel', style: 'cancel' },
-              { text: STATUS_ACTIONS[order.status] || nextStatus, onPress: () => updateStatus(nextStatus) },
-            ]);
-          }}
-        >
-          <Text style={styles.updateButtonText}>{STATUS_ACTIONS[order.status] || `Move to ${nextStatus}`}</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+        {canUpdate && (
+          <GlowButton title={ACTIONS[order.status] || `Move to ${nextStatus}`} onPress={() => { Alert.alert('Update Status', `${ACTIONS[order.status]}?`, [{ text: 'Cancel', style: 'cancel' }, { text: ACTIONS[order.status] || nextStatus, onPress: () => updateStatus(nextStatus) }]); }} size="lg" />
+        )}
+      </ScrollView>
+    </LinearGradient>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  content: { padding: 24 },
-  loading: { textAlign: 'center', marginTop: 40, color: COLORS.gray[400] },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  restaurantName: { fontSize: 22, fontWeight: 'bold', color: COLORS.gray[800] },
-  statusBadge: { backgroundColor: '#10B98120', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  statusBadgeCancelled: { backgroundColor: '#EF444420' },
-  statusBadgeDelivered: { backgroundColor: '#10B98120' },
-  statusText: { fontSize: 14, fontWeight: '600', color: '#10B981', textTransform: 'capitalize' },
-  section: { backgroundColor: COLORS.white, borderRadius: 16, padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.gray[700], marginBottom: 12 },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 6 },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: 15, color: COLORS.gray[700] },
-  itemNote: { fontSize: 12, color: COLORS.gray[400], fontStyle: 'italic', marginTop: 2 },
-  itemPrice: { fontSize: 15, fontWeight: '500', color: COLORS.gray[700] },
-  detailText: { fontSize: 14, color: COLORS.gray[600], marginBottom: 4 },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, marginTop: 4 },
-  totalLabel: { fontSize: 14, color: COLORS.gray[500] },
-  totalValue: { fontSize: 14, fontWeight: '500', color: COLORS.gray[700] },
-  updateButton: {
-    backgroundColor: '#10B981', borderRadius: 16, padding: 16, alignItems: 'center',
-  },
-  updateButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '600' },
-});

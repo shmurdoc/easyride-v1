@@ -4,24 +4,22 @@
     "slug": "easyryde-rider",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1E40AF"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "za.co.easyryde.rider"
+      "bundleIdentifier": "za.co.easyryde.rider",
+      "config": {
+        "googleMapsApiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1E40AF"
-      },
-      "package": "za.co.easyryde.rider"
+      "package": "za.co.easyryde.rider",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+        }
+      }
     },
     "plugins": [
       "expo-location"

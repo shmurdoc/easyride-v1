@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 class PushNotificationService
 {
     private const FCM_URL = 'https://fcm.googleapis.com/v1/projects/%s/messages:send';
+
     private const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 
     public function __construct(
@@ -34,7 +35,7 @@ class PushNotificationService
             $result = $this->sendToToken($token, $notification, $data);
             $results[] = $result;
 
-            if (!$result['success'] && in_array($result['error'] ?? '', ['NotRegistered', 'InvalidRegistration', 'MismatchedSenderId'])) {
+            if (! $result['success'] && in_array($result['error'] ?? '', ['NotRegistered', 'InvalidRegistration', 'MismatchedSenderId'])) {
                 $token->update(['is_active' => false]);
             }
         }
@@ -42,7 +43,7 @@ class PushNotificationService
         return [
             'success' => true,
             'sent' => count(array_filter($results, fn ($r) => $r['success'])),
-            'failed' => count(array_filter($results, fn ($r) => !$r['success'])),
+            'failed' => count(array_filter($results, fn ($r) => ! $r['success'])),
         ];
     }
 
@@ -100,6 +101,7 @@ class PushNotificationService
                 'token_id' => $token->id,
                 'error' => $e->getMessage(),
             ]);
+
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
@@ -131,6 +133,7 @@ class PushNotificationService
     public function sendToRole(string $role, array $notification, array $data = []): array
     {
         $userIds = User::role($role)->pluck('id')->toArray();
+
         return $this->sendToMultipleUsers($userIds, $notification, $data);
     }
 
@@ -168,7 +171,7 @@ class PushNotificationService
 
         $signatureInput = "$header.$payload";
         openssl_sign($signatureInput, $signature, $serviceAccount['private_key'], 'SHA256');
-        $jwt = "$header.$payload." . base64_encode($signature);
+        $jwt = "$header.$payload.".base64_encode($signature);
 
         $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',

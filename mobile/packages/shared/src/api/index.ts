@@ -1,4 +1,5 @@
 import { api } from './client';
+export { api };
 import type {
   User, Ride, Payment, Wallet, WalletTransaction, Rating,
   PromoCode, Delivery, PaginatedResponse, PlatformConfig, DriverLocation,
@@ -76,6 +77,11 @@ export const drivers = {
     color: string; license_plate: string; category: string;
   }) => api.post('/drivers/vehicle', data),
 
+  updateVehicle: (data: {
+    make: string; model: string; year: number;
+    color: string; license_plate: string; category: string;
+  }) => api.put('/drivers/vehicle', data),
+
   toggleOnline: () => api.post<{ is_online: boolean }>('/drivers/toggle-online'),
 
   earnings: () => api.get<{
@@ -91,6 +97,14 @@ export const drivers = {
 
   nearbyRides: (radius?: number) =>
     api.get<Ride[]>('/drivers/nearby-rides', radius ? { radius: String(radius) } : undefined),
+
+  updateLocation: (lat: number, lng: number) =>
+    api.post('/driver/location', { latitude: lat, longitude: lng }),
+};
+
+export const notifications = {
+  registerToken: (token: string) =>
+    api.post('/notifications/register-token', { token }),
 };
 
 export const payments = {
@@ -193,4 +207,3 @@ export const reports = {
 };
 
 export { foodDelivery } from './foodDelivery';
-export type { Restaurant, RestaurantCategory, MenuItem, FoodOrder, FoodOrderItem, CartItem } from './foodDelivery';

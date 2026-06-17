@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Broadcast;
-use App\Broadcasting\Channels\RideChannel;
 use App\Broadcasting\Channels\DriverChannel;
+use App\Broadcasting\Channels\RideChannel;
+use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('rides.{rideId}', RideChannel::class);
 Broadcast::channel('drivers.{driverId}', DriverChannel::class);

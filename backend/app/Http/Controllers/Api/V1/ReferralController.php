@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Referral\ReferralApplyRequest;
 use App\Services\ReferralService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class ReferralController extends Controller
     {
         $code = $this->referralService->getUserCode($request->user());
 
-        if (!$code) {
+        if (! $code) {
             $code = $this->referralService->generateCode($request->user());
         }
 
@@ -30,15 +31,13 @@ class ReferralController extends Controller
         ]);
     }
 
-    public function apply(Request $request): JsonResponse
+    public function apply(ReferralApplyRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         $result = $this->referralService->applyReferral($request->user(), $validated['code']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json($result, 422);
         }
 

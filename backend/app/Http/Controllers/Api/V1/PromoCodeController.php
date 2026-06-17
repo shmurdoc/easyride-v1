@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Promo\PromoCodeCreateRequest;
+use App\Http\Requests\Api\V1\Promo\PromoCodeUpdateRequest;
+use App\Http\Requests\Api\V1\Promo\ValidateCodeRequest;
 use App\Models\PromoCode;
 use App\Services\PromoCodeService;
 use Illuminate\Http\JsonResponse;
@@ -28,19 +31,9 @@ class PromoCodeController extends Controller
         return response()->json($promoCodes);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(PromoCodeCreateRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => 'required|string|max:50|unique:promo_codes,code',
-            'type' => 'required|string|in:fixed,percentage',
-            'value' => 'required|numeric|min:0',
-            'min_ride_amount' => 'sometimes|numeric|min:0',
-            'max_discount' => 'sometimes|numeric|min:0',
-            'max_uses' => 'sometimes|integer|min:1',
-            'starts_at' => 'sometimes|date',
-            'expires_at' => 'sometimes|date|after:starts_at',
-            'is_active' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         $promoCode = PromoCode::create([
             'tenant_id' => $request->user()->tenant_id,
@@ -55,19 +48,9 @@ class PromoCodeController extends Controller
         return response()->json($promoCode->load('tenant'));
     }
 
-    public function update(Request $request, PromoCode $promoCode): JsonResponse
+    public function update(PromoCodeUpdateRequest $request, PromoCode $promoCode): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => 'sometimes|string|max:50|unique:promo_codes,code,' . $promoCode->id,
-            'type' => 'sometimes|string|in:fixed,percentage',
-            'value' => 'sometimes|numeric|min:0',
-            'min_ride_amount' => 'sometimes|numeric|min:0',
-            'max_discount' => 'sometimes|numeric|min:0',
-            'max_uses' => 'sometimes|integer|min:1',
-            'starts_at' => 'sometimes|date',
-            'expires_at' => 'sometimes|date|after:starts_at',
-            'is_active' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         $promoCode->update($validated);
 
@@ -81,12 +64,9 @@ class PromoCodeController extends Controller
         return response()->json(null, 204);
     }
 
-    public function validateCode(Request $request): JsonResponse
+    public function validateCode(ValidateCodeRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'code' => 'required|string|max:50',
-            'ride_amount' => 'sometimes|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
             $promo = $this->promoCodeService->validateCode(

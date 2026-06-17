@@ -36,13 +36,13 @@ return [
     ],
 
     'payfast' => [
-        'merchant_id' => env('PAYFAST_MERCHANT_ID', '10000100'),
-        'merchant_key' => env('PAYFAST_MERCHANT_KEY', '46f0cd694581a'),
+        'merchant_id' => env('PAYFAST_MERCHANT_ID', ''),
+        'merchant_key' => env('PAYFAST_MERCHANT_KEY', ''),
         'passphrase' => env('PAYFAST_PASSPHRASE', ''),
         'sandbox' => env('PAYFAST_SANDBOX', true),
-        'return_url' => env('PAYFAST_RETURN_URL', 'https://easyryde.co.za/payments/payfast/return'),
-        'cancel_url' => env('PAYFAST_CANCEL_URL', 'https://easyryde.co.za/payments/payfast/cancel'),
-        'notify_url' => env('PAYFAST_NOTIFY_URL', 'https://easyryde.co.za/api/v1/payments/payfast/webhook'),
+        'return_url' => env('PAYFAST_RETURN_URL', 'https://your-domain.com/payments/payfast/return'),
+        'cancel_url' => env('PAYFAST_CANCEL_URL', 'https://your-domain.com/payments/payfast/cancel'),
+        'notify_url' => env('PAYFAST_NOTIFY_URL', 'https://your-domain.com/api/v1/payments/payfast/webhook'),
     ],
 
     'ozow' => [
@@ -50,9 +50,26 @@ return [
         'api_key' => env('OZOW_API_KEY', ''),
         'private_key' => env('OZOW_PRIVATE_KEY', ''),
         'sandbox' => env('OZOW_SANDBOX', true),
-        'notify_url' => env('OZOW_NOTIFY_URL', 'https://easyryde.co.za/api/v1/payments/ozow/webhook'),
-        'return_url' => env('OZOW_RETURN_URL', 'https://easyryde.co.za/payments/ozow/return'),
-        'cancel_url' => env('OZOW_CANCEL_URL', 'https://easyryde.co.za/payments/ozow/cancel'),
+        'notify_url' => env('OZOW_NOTIFY_URL', 'https://your-domain.com/api/v1/payments/ozow/webhook'),
+        'return_url' => env('OZOW_RETURN_URL', 'https://your-domain.com/payments/ozow/return'),
+        'cancel_url' => env('OZOW_CANCEL_URL', 'https://your-domain.com/payments/ozow/cancel'),
+    ],
+
+    'stripe' => [
+        'secret_key' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'publishable_key' => env('STRIPE_PUBLISHABLE_KEY'),
+    ],
+
+    'fcm' => [
+        'project_id' => env('FCM_PROJECT_ID'),
+        'service_account_path' => env('FCM_SERVICE_ACCOUNT_PATH', 'storage/firebase-service-account.json'),
+    ],
+
+    'twilio' => [
+        'sid' => env('TWILIO_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'from_number' => env('TWILIO_FROM_NUMBER'),
     ],
 
 ];

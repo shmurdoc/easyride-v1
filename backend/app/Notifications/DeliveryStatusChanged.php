@@ -14,8 +14,7 @@ class DeliveryStatusChanged extends Notification implements ShouldQueue
 
     public function __construct(
         protected Delivery $delivery
-    )
-    {
+    ) {
         $this->onQueue('horizon');
     }
 

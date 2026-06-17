@@ -1,9 +1,9 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useRef } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@easyryde/shared';
+import { useAuth, useNotifications, ErrorBoundary } from '@easyryde/shared';
 import { COLORS } from '@easyryde/shared';
 
 import LoginScreen from './screens/LoginScreen';
@@ -34,8 +34,13 @@ function DriverTabs() {
           else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#10B981',
-        tabBarInactiveTintColor: COLORS.gray[400],
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textDim,
+        tabBarStyle: {
+          backgroundColor: COLORS.surface,
+          borderTopColor: COLORS.border,
+          borderTopWidth: 1,
+        },
         headerShown: false,
       })}
     >
@@ -51,12 +56,19 @@ function DriverTabs() {
 
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const navigationRef = useRef<NavigationContainerRef<any>>(null);
+
+  useNotifications(navigationRef);
 
   if (isLoading) return null;
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <ErrorBoundary>
+    <NavigationContainer ref={navigationRef}>
+      <Stack.Navigator screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (
@@ -69,5 +81,6 @@ export default function AppLayout() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </ErrorBoundary>
   );
 }

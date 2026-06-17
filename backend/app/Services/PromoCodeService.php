@@ -6,7 +6,6 @@ namespace App\Services;
 
 use App\Models\PromoCode;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 
 class PromoCodeService
 {
@@ -45,12 +44,14 @@ class PromoCodeService
 
     public function applyDiscount(PromoCode $promo, float $rideAmount): array
     {
+        $value = (float) $promo->value;
+        $maxDiscount = (float) ($promo->max_discount ?? 0);
         $discount = $promo->type === 'percentage'
-            ? $rideAmount * ($promo->value / 100)
-            : $promo->value;
+            ? $rideAmount * ($value / 100)
+            : $value;
 
-        if ($promo->max_discount > 0 && $discount > $promo->max_discount) {
-            $discount = $promo->max_discount;
+        if ($maxDiscount > 0 && $discount > $maxDiscount) {
+            $discount = $maxDiscount;
         }
 
         return [

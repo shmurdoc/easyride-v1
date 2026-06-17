@@ -2,13 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, develop]
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
-  tests:
+  backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: easyryde_test
+          POSTGRES_USER: easyryde
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -16,64 +43,120 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.4
-          extensions: pdo_sqlite, sqlite3, redis, mbstring, zip, bcmath, gd, intl, exif
-          tools: composer:v2
-          coverage: none
-
-      - name: Get composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Prepare environment
-        run: |
-          cd backend
-          cp .env.example .env
-          php -r "echo 'APP_KEY=base64:' . base64_encode(random_bytes(32)) . PHP_EOL;" > .env.tmp
-          grep -v '^APP_KEY=' .env >> .env.tmp
-          mv .env.tmp .env
-          echo "APP_ENV=testing" >> .env
-          echo "DB_CONNECTION=sqlite" >> .env
-          echo "DB_DATABASE=:memory:" >> .env
-          echo "CACHE_STORE=array" >> .env
-          echo "SESSION_DRIVER=array" >> .env
-          echo "QUEUE_CONNECTION=sync" >> .env
-          echo "MAIL_MAILER=array" >> .env
-          echo "BROADCAST_CONNECTION=null" >> .env
+          php-version: '8.3'
+          extensions: pdo_pgsql, redis, bcmath
+          coverage: xdebug
 
       - name: Install dependencies
-        run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress
+        run: composer install --no-interaction --prefer-dist
 
-      - name: Run database migrations
-        run: cd backend && php artisan migrate --force
+      - name: Copy .env
+        run: cp .env.example .env
 
-      - name: Execute tests
-        run: cd backend && php artisan test
+      - name: Generate key
+        run: php artisan key:generate
 
-  lint:
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G --no-progress
+
+      - name: Run Pint
+        run: ./vendor/bin/pint --test
+
+      - name: Run tests
+        run: php artisan test
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: easyryde_test
+          DB_USERNAME: easyryde
+          DB_PASSWORD: test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: backend/coverage
+
+  socket:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/socket-server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/socket-server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: 8.4
-          tools: composer:v2, phpcs, phpstan
-          coverage: none
+      - name: Run security check
+        uses: symfonycorp/security-checker-action@v5
 
-      - name: Install dependencies
-        run: cd backend && composer install --no-interaction --prefer-dist --no-progress
-
-      - name: PHP CodeSniffer
-        run: cd backend && vendor/bin/phpcs --standard=psr12 app/ config/ routes/ tests/ --ignore=*/ExampleTest.php || true
-
-      - name: PHPStan
-        run: cd backend && phpstan analyse app/ --level=0 --no-progress || true
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

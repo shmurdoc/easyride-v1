@@ -6,12 +6,19 @@ namespace App\Providers;
 
 use App\Services\OzowService;
 use App\Services\PayFastService;
+use App\Services\Payment\CashReconciliationService;
+use App\Services\Payment\EscrowService;
+use App\Services\Payment\PaymentRouter;
+use App\Services\Payment\PayoutService;
+use App\Services\Payment\RefundService;
+use App\Services\Payment\StripeService;
 use Illuminate\Support\ServiceProvider;
 
 class PaymentServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Legacy service registrations
         $this->app->singleton(PayFastService::class, function () {
             return new PayFastService(
                 merchantId: config('services.payfast.merchant_id', ''),
@@ -35,5 +42,13 @@ class PaymentServiceProvider extends ServiceProvider
                 cancelUrl: config('services.ozow.cancel_url', ''),
             );
         });
+
+        // New Payment\* service registrations
+        $this->app->singleton(StripeService::class);
+        $this->app->singleton(EscrowService::class);
+        $this->app->singleton(CashReconciliationService::class);
+        $this->app->singleton(RefundService::class);
+        $this->app->singleton(PayoutService::class);
+        $this->app->singleton(PaymentRouter::class);
     }
 }

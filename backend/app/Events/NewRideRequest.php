@@ -23,11 +23,11 @@ class NewRideRequest implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('ride:' . $this->ride->id),
+            new Channel('ride:'.$this->ride->id),
         ];
 
         foreach ($this->nearbyDriverIds as $driverId) {
-            $channels[] = new Channel('driver:' . $driverId);
+            $channels[] = new Channel('driver:'.$driverId);
         }
 
         return $channels;

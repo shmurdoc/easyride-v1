@@ -25,12 +25,51 @@ class FoodDeliveryService
         'cancelled' => [],
     ];
 
+    public function isRestaurantOpen(Restaurant $restaurant): bool
+    {
+        if (! $restaurant->opens_at || ! $restaurant->closes_at) {
+            return true;
+        }
+
+        $now = now()->format('H:i');
+
+        return $now >= $restaurant->opens_at && $now <= $restaurant->closes_at;
+    }
+
+    public function driverAcceptOrder(FoodOrder $order, User $driver): FoodOrder
+    {
+        if ($order->status !== 'pending') {
+            throw new \RuntimeException('Order is no longer available for acceptance.');
+        }
+
+        if ($order->driver_id !== null) {
+            throw new \RuntimeException('Order already has a driver assigned.');
+        }
+
+        $order->update([
+            'driver_id' => $driver->id,
+            'status' => 'confirmed',
+        ]);
+
+        $driver->update(['current_ride_id' => $order->id]);
+
+        event(new FoodOrderStatusUpdated($order));
+
+        return $order->fresh()->load(['items', 'restaurant', 'customer']);
+    }
+
     public function createOrder(
         Restaurant $restaurant,
         User $customer,
         array $items,
         array $deliveryData,
     ): FoodOrder {
+        if (! $this->isRestaurantOpen($restaurant)) {
+            throw new \RuntimeException(
+                "Restaurant is closed. Hours: {$restaurant->opens_at} - {$restaurant->closes_at}"
+            );
+        }
+
         return DB::transaction(function () use ($restaurant, $customer, $items, $deliveryData) {
             $subtotal = 0;
             $orderItems = [];
@@ -38,7 +77,7 @@ class FoodDeliveryService
             foreach ($items as $item) {
                 $menuItem = MenuItem::findOrFail($item['menu_item_id']);
 
-                if (!$menuItem->is_available || !$menuItem->is_active) {
+                if (! $menuItem->is_available || ! $menuItem->is_active) {
                     throw new \RuntimeException("Item '{$menuItem->name}' is not available.");
                 }
 
@@ -102,7 +141,7 @@ class FoodDeliveryService
     public function updateStatus(FoodOrder $order, string $newStatus, ?string $reason = null): FoodOrder
     {
         $allowed = self::STATUS_FLOW[$order->status] ?? [];
-        if (!in_array($newStatus, $allowed)) {
+        if (! in_array($newStatus, $allowed)) {
             throw new \RuntimeException(
                 "Cannot transition from '{$order->status}' to '{$newStatus}'."
             );
@@ -169,6 +208,16 @@ class FoodDeliveryService
         ]);
 
         return $order->fresh();
+    }
+
+    public function getAvailableOrders(User $driver, ?string $status = null)
+    {
+        return FoodOrder::whereNull('driver_id')
+            ->where('status', 'pending')
+            ->when($status, fn ($q, $s) => $q->where('status', $s))
+            ->with(['items', 'restaurant', 'customer'])
+            ->latest()
+            ->get();
     }
 
     public function getRestaurantOrders(Restaurant $restaurant, ?string $status = null)

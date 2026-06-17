@@ -1,29 +1,27 @@
-FROM php:8.4-fpm
+FROM php:8.3-fpm-alpine
 
-COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+RUN apk add --no-cache \
+    postgresql-dev \
+    libzip-dev \
+    unzip \
+    git \
+    && docker-php-ext-install pdo_pgsql zip bcmath
 
-RUN install-php-extensions \
-    pdo_pgsql \
-    pgsql \
-    redis \
-    zip \
-    mbstring \
-    exif \
-    pcntl \
-    bcmath \
-    gd \
-    intl \
-    @composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser -m appuser
-
-USER appuser
 WORKDIR /var/www/html
 
-COPY --chown=appuser:appuser backend .
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN mkdir -p storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache
+COPY . .
+
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions \
+    storage/framework/views bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+USER www-data
 
 EXPOSE 9000
 CMD ["php-fpm"]

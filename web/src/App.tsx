@@ -13,6 +13,17 @@ import PricingScreen from '@/pages/PricingScreen';
 import ReportsScreen from '@/pages/ReportsScreen';
 import SettingsScreen from '@/pages/SettingsScreen';
 import LiveMapScreen from '@/pages/LiveMapScreen';
+import FoodScreen from '@/pages/FoodScreen';
+import PromoScreen from '@/pages/PromoScreen';
+import ComplianceScreen from '@/pages/ComplianceScreen';
+import AuditLogScreen from '@/pages/AuditLogScreen';
+import DashboardPage from '@/pages/DashboardPage';
+import DriversPage from '@/pages/DriversPage';
+import PricingPage from '@/pages/PricingPage';
+import RestaurantsPage from '@/pages/RestaurantsPage';
+import FoodOrdersPage from '@/pages/FoodOrdersPage';
+import AuditLogPage from '@/pages/AuditLogPage';
+import PayoutsPage from '@/pages/PayoutsPage';
 import NotFoundScreen from '@/pages/NotFoundScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -44,6 +55,13 @@ export default function App() {
             <Route path="reports" element={<ReportsScreen />} />
             <Route path="settings" element={<SettingsScreen />} />
             <Route path="map" element={<LiveMapScreen />} />
+            <Route path="food" element={<FoodScreen />} />
+            <Route path="promo" element={<PromoScreen />} />
+            <Route path="compliance" element={<ComplianceScreen />} />
+            <Route path="audit" element={<AuditLogScreen />} />
+            <Route path="restaurants" element={<RestaurantsPage />} />
+            <Route path="food-orders" element={<FoodOrdersPage />} />
+            <Route path="payouts" element={<PayoutsPage />} />
           </Route>
           <Route path="*" element={<NotFoundScreen />} />
         </Routes>

@@ -7,13 +7,12 @@ namespace App\Services;
 use App\Models\Ride;
 use App\Models\RideChatMessage;
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
 
 class ChatService
 {
     public function sendMessage(Ride $ride, User $sender, string $message): RideChatMessage
     {
-        if (!$this->canSendMessage($ride, $sender)) {
+        if (! $this->canSendMessage($ride, $sender)) {
             throw new \RuntimeException('You are not part of this ride.');
         }
 

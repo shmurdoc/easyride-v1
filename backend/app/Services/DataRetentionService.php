@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Ride;
-use App\Models\Payment;
-use App\Models\Delivery;
 use App\Models\ConsentRecord;
-use App\Models\KycVerification;
+use App\Models\Delivery;
 use App\Models\IncidentReport;
+use App\Models\KycVerification;
+use App\Models\Payment;
+use App\Models\Ride;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -69,7 +69,7 @@ class DataRetentionService
 
             $user->update([
                 'name' => 'Deleted User',
-                'email' => 'deleted_' . $user->id . '@anonymized.local',
+                'email' => 'deleted_'.$user->id.'@anonymized.local',
                 'phone_number' => null,
                 'password' => null,
                 'current_latitude' => 0,
@@ -195,7 +195,7 @@ class DataRetentionService
             $pathParts = explode('/', $file);
             $userId = $pathParts[1] ?? null;
 
-            if ($userId && !User::where('id', $userId)->exists()) {
+            if ($userId && ! User::where('id', $userId)->exists()) {
                 Storage::disk('private')->delete($file);
                 $count++;
             }
@@ -206,7 +206,7 @@ class DataRetentionService
             $pathParts = explode('/', $file);
             $incidentId = $pathParts[1] ?? null;
 
-            if ($incidentId && !IncidentReport::where('id', $incidentId)->exists()) {
+            if ($incidentId && ! IncidentReport::where('id', $incidentId)->exists()) {
                 Storage::disk('private')->delete($file);
                 $count++;
             }
@@ -218,8 +218,8 @@ class DataRetentionService
     private function deleteUserFiles(User $user): void
     {
         $directories = [
-            'kyc/' . $user->id,
-            'profile/' . $user->id,
+            'kyc/'.$user->id,
+            'profile/'.$user->id,
             'incidents',
         ];
 
@@ -233,11 +233,12 @@ class DataRetentionService
     private function getLastCleanupDate(): ?string
     {
         $logPath = storage_path('logs/data_cleanup.log');
-        if (!file_exists($logPath)) {
+        if (! file_exists($logPath)) {
             return null;
         }
 
         $lines = file($logPath, FILE_IGNORE_NEW_LINES);
+
         return end($lines) ?? null;
     }
 
@@ -275,13 +276,13 @@ class DataRetentionService
     {
         $logPath = storage_path('logs/data_cleanup.log');
         $message = sprintf(
-            "[%s] Cleanup: anonymized=%d, deleted=%d, files=%d",
+            '[%s] Cleanup: anonymized=%d, deleted=%d, files=%d',
             now()->toDateTimeString(),
             $results['anonymized'],
             $results['deleted'],
             $results['files_deleted']
         );
 
-        file_put_contents($logPath, $message . PHP_EOL, FILE_APPEND | LOCK_EX);
+        file_put_contents($logPath, $message.PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 }

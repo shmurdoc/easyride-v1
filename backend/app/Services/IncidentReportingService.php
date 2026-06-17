@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Exceptions\EvidenceNotFoundException;
 use App\Models\IncidentReport;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use App\Notifications\IncidentAlertNotification;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 class IncidentReportingService
 {
@@ -43,7 +45,7 @@ class IncidentReportingService
 
         if ($evidence) {
             foreach ($evidence as $file) {
-                $path = $file->store('incidents/' . $incident->id, 'private');
+                $path = $file->store('incidents/'.$incident->id, 'private');
                 $incident->addEvidence($path);
             }
         }
@@ -60,14 +62,14 @@ class IncidentReportingService
         return $incident->load(['reporter', 'assignedTo', 'ride', 'delivery']);
     }
 
-    public function getMyIncidents(User $reporter): \Illuminate\Database\Eloquent\Collection
+    public function getMyIncidents(User $reporter): Collection
     {
         return IncidentReport::where('reporter_id', $reporter->id)
             ->orderByDesc('created_at')
             ->get();
     }
 
-    public function getAllIncidents(?string $status = null): \Illuminate\Database\Eloquent\Collection
+    public function getAllIncidents(?string $status = null): Collection
     {
         $query = IncidentReport::with(['reporter', 'assignedTo']);
 
@@ -78,7 +80,7 @@ class IncidentReportingService
         return $query->orderByDesc('created_at')->get();
     }
 
-    public function getOpenIncidents(): \Illuminate\Database\Eloquent\Collection
+    public function getOpenIncidents(): Collection
     {
         return IncidentReport::where('status', IncidentReport::STATUS_OPEN)
             ->with(['reporter', 'assignedTo'])
@@ -133,14 +135,14 @@ class IncidentReportingService
     {
         $paths = $incident->evidence_paths ?? [];
 
-        if (!isset($paths[$index])) {
-            throw new \App\Exceptions\EvidenceNotFoundException('Evidence not found');
+        if (! isset($paths[$index])) {
+            throw new EvidenceNotFoundException('Evidence not found');
         }
 
         $path = $paths[$index];
 
-        if (!Storage::disk('private')->exists($path)) {
-            throw new \App\Exceptions\EvidenceNotFoundException('Evidence file not found');
+        if (! Storage::disk('private')->exists($path)) {
+            throw new EvidenceNotFoundException('Evidence file not found');
         }
 
         return Storage::disk('private')->download($path);
@@ -151,7 +153,7 @@ class IncidentReportingService
         $admins = User::role('admin')->get();
 
         foreach ($admins as $admin) {
-            Notification::send($admin, new \App\Notifications\IncidentAlertNotification($incident));
+            Notification::send($admin, new IncidentAlertNotification($incident));
         }
     }
 
@@ -173,7 +175,7 @@ class IncidentReportingService
             IncidentReport::TYPE_OTHER,
         ];
 
-        if (!in_array($type, $validTypes)) {
+        if (! in_array($type, $validTypes)) {
             throw new \InvalidArgumentException("Invalid incident type: {$type}");
         }
     }
@@ -187,7 +189,7 @@ class IncidentReportingService
             IncidentReport::SEVERITY_CRITICAL,
         ];
 
-        if (!in_array($severity, $validSeverities)) {
+        if (! in_array($severity, $validSeverities)) {
             throw new \InvalidArgumentException("Invalid severity: {$severity}");
         }
     }

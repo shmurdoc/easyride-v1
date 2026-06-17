@@ -12,7 +12,7 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || !$request->user()->hasAnyRole(['admin', 'super-admin'])) {
+        if (! $request->user() || ! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
             return response()->json(['message' => 'Forbidden. Admin access required.'], 403);
         }
 

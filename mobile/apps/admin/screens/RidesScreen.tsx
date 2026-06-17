@@ -1,94 +1,94 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { admin } from '@easyryde/shared';
-import { COLORS, formatCurrency, formatDate, RIDE_STATUS_COLORS } from '@easyryde/shared';
+import { FlatList, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { admin, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { Typography } from '@easyryde/shared';
+import { Chip } from '@easyryde/shared';
+import { GlassCard } from '@easyryde/shared';
+import { GradientText } from '@easyryde/shared';
+import { Shimmer } from '@easyryde/shared';
+import { RideStatusBadge } from '@easyryde/shared';
 import type { Ride } from '@easyryde/shared';
 
 export default function RidesScreen() {
   const [ridesList, setRidesList] = useState<Ride[]>([]);
   const [filter, setFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadRides(); }, [filter]);
 
   async function loadRides() {
-    try {
-      const params: Record<string, string> = { per_page: '50' };
-      if (filter) params.status = filter;
-      const data = await admin.rides(params);
-      setRidesList(data.data);
-    } catch {} finally { setLoading(false); }
+    try { const params: Record<string, string> = { per_page: '50' }; if (filter) params.status = filter; const data = await admin.rides(params); setRidesList(data.data); }
+    catch (err) { console.warn('Failed to load rides:', err); } finally { setLoading(false); setRefreshing(false); }
   }
 
-  const filters = [null, 'searching', 'accepted', 'in_progress', 'completed', 'cancelled'];
+  const onRefresh = React.useCallback(() => { setRefreshing(true); loadRides(); }, [filter]);
+
+  const filters = ['all', 'searching', 'accepted', 'in_progress', 'completed', 'cancelled'];
+
+  const getStatusGlow = (status: string) => {
+    switch (status) {
+      case 'completed': return COLORS.successGlow;
+      case 'cancelled': return COLORS.errorGlow;
+      case 'in_progress': return COLORS.primaryGlow;
+      default: return 'rgba(255,255,255,0.05)';
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <Typography variant="h2" style={{ padding: SPACING.base, paddingBottom: SPACING.sm }}>Rides</Typography>
+        <View style={{ flexDirection: 'row', paddingHorizontal: SPACING.base, marginBottom: SPACING.base, gap: SPACING.sm }}>
+          {[1, 2, 3].map((i) => <Shimmer key={i} width={70} height={32} borderRadius={RADIUS.full} />)}
+        </View>
+        {[1, 2, 3].map((i) => (
+          <GlassCard key={i} style={{ marginHorizontal: SPACING.base, marginBottom: SPACING.sm }}>
+            <Shimmer width={80} height={20} style={{ marginBottom: SPACING.sm }} />
+            <Shimmer width="100%" height={16} style={{ marginBottom: SPACING.sm }} />
+            <Shimmer width="60%" height={14} />
+          </GlassCard>
+        ))}
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Rides</Text>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <LinearGradient colors={['rgba(212,175,55,0.1)', 'rgba(0,0,0,0)']} style={styles.header}>
+        <Typography variant="h2">Rides</Typography>
+      </LinearGradient>
 
-      <FlatList
-        horizontal
-        data={filters}
-        keyExtractor={(item) => item || 'all'}
-        showsHorizontalScrollIndicator={false}
-        style={styles.filters}
-        contentContainerStyle={styles.filtersContent}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterChip, filter === item && styles.filterActive]}
-            onPress={() => setFilter(item)}
-          >
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>
-              {item || 'All'}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+      <View style={{ flexDirection: 'row', paddingHorizontal: SPACING.base, marginBottom: SPACING.base, gap: SPACING.sm }}>
+        {filters.map((f) => (
+          <Chip key={f} label={f === 'all' ? 'All' : f.replace('_', ' ')} selected={filter === f || (f === 'all' && filter === null)} onPress={() => setFilter(f === 'all' ? null : f)} />
+        ))}
+      </View>
 
       <FlatList
         data={ridesList}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ padding: SPACING.base }}
+        ListEmptyComponent={<Typography variant="body" color={COLORS.textDim} style={{ textAlign: 'center', marginTop: 40 }}>No rides found</Typography>}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.date}>{formatDate(item.created_at)}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: RIDE_STATUS_COLORS[item.status] + '20' }]}>
-                <Text style={[styles.statusText, { color: RIDE_STATUS_COLORS[item.status] }]}>{item.status}</Text>
-              </View>
+          <GlassCard glow glowColor={getStatusGlow(item.status)} style={{ marginBottom: SPACING.sm }}>
+            <RideStatusBadge status={item.status} style={{ marginBottom: SPACING.sm }} />
+            <Typography variant="body" style={{ marginBottom: SPACING.sm }}>{item.pickup_address} → {item.dropoff_address}</Typography>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Typography variant="small" color={COLORS.textMuted}>{item.rider?.name || item.rider_id}</Typography>
+              {item.total_fare && <GradientText colors={GRADIENTS.primary} style={styles.price}>R {item.total_fare.toFixed(2)}</GradientText>}
             </View>
-            <Text style={styles.route}>{item.pickup_address} → {item.dropoff_address}</Text>
-            <View style={styles.cardFooter}>
-              <Text style={styles.rider}>{item.rider?.name || item.rider_id}</Text>
-              {item.total_fare && <Text style={styles.fare}>{formatCurrency(item.total_fare)}</Text>}
-            </View>
-          </View>
+          </GlassCard>
         )}
-        contentContainerStyle={styles.list}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.gray[50] },
-  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.gray[800], padding: 24, paddingBottom: 8 },
-  filters: { maxHeight: 50 },
-  filtersContent: { paddingHorizontal: 24, gap: 8, paddingBottom: 12 },
-  filterChip: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.gray[200],
-  },
-  filterActive: { backgroundColor: '#7C3AED', borderColor: '#7C3AED' },
-  filterText: { fontSize: 13, color: COLORS.gray[600] },
-  filterTextActive: { color: COLORS.white, fontWeight: '600' },
-  list: { padding: 24 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 8 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  date: { fontSize: 13, color: COLORS.gray[400] },
-  statusBadge: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 2 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  route: { fontSize: 14, color: COLORS.gray[700], marginBottom: 8 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  rider: { fontSize: 13, color: COLORS.gray[500] },
-  fare: { fontSize: 16, fontWeight: 'bold', color: '#7C3AED' },
+  header: { paddingTop: SPACING['2xl'], paddingBottom: SPACING.sm, paddingHorizontal: SPACING.base },
+  price: { fontSize: 18, fontWeight: '700' },
 });

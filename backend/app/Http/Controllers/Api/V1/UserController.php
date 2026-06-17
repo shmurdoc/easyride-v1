@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\User\UserUpdateRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,14 +28,9 @@ class UserController extends Controller
         return response()->json($user->load(['tenant', 'driverProfile', 'vehicle']));
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(UserUpdateRequest $request, User $user): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'phone_number' => 'sometimes|string|max:20|unique:users,phone_number,' . $user->id,
-            'is_active' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         $user->update($validated);
 

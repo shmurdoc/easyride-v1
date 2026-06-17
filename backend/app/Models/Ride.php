@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Ride extends Model
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected $keyType = 'string';
+
     public $incrementing = false;
 
     protected $fillable = [
@@ -21,6 +23,7 @@ class Ride extends Model
         'base_fare', 'per_km_fare', 'surge_multiplier', 'total_fare',
         'promo_code_id', 'discount_amount', 'payment_method', 'payment_status',
         'driver_eta', 'started_at', 'completed_at', 'cancelled_at', 'cancelled_by',
+        'route_polyline', 'cancellation_reason',
     ];
 
     protected function casts(): array

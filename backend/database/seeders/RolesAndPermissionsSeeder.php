@@ -4,19 +4,23 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\DriverProfile;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Vehicle;
+use App\Models\Wallet;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
         // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // Create permissions
         Permission::create(['name' => 'manage users']);
@@ -120,7 +124,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $driverUser->assignRole('driver');
 
         // Create driver profile for demo driver
-        \App\Models\DriverProfile::firstOrCreate(
+        DriverProfile::firstOrCreate(
             ['user_id' => $driverUser->id],
             [
                 'license_number' => 'GP12345678',
@@ -139,7 +143,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
 
         // Create vehicle for demo driver
-        \App\Models\Vehicle::firstOrCreate(
+        Vehicle::firstOrCreate(
             ['user_id' => $driverUser->id],
             [
                 'make' => 'Toyota',
@@ -152,12 +156,12 @@ class RolesAndPermissionsSeeder extends Seeder
         );
 
         // Create wallet for demo users
-        \App\Models\Wallet::firstOrCreate(
+        Wallet::firstOrCreate(
             ['user_id' => $rider->id],
             ['balance' => 500.00, 'pending_balance' => 0.00, 'currency' => 'ZAR']
         );
 
-        \App\Models\Wallet::firstOrCreate(
+        Wallet::firstOrCreate(
             ['user_id' => $driverUser->id],
             ['balance' => 250.00, 'pending_balance' => 0.00, 'currency' => 'ZAR']
         );

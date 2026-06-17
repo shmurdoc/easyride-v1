@@ -31,8 +31,8 @@ class PaymentReceived extends Notification implements ShouldQueue
     {
         $title = $this->type === 'rider' ? 'Payment Processed' : 'Payment Received';
         $body = $this->type === 'rider'
-            ? "R" . number_format($this->payment->amount, 2) . " paid for your ride"
-            : "R" . number_format($this->payment->amount, 2) . " earned from ride";
+            ? 'R'.number_format($this->payment->amount, 2).' paid for your ride'
+            : 'R'.number_format($this->payment->amount, 2).' earned from ride';
 
         return [
             'title' => $title,
@@ -57,8 +57,8 @@ class PaymentReceived extends Notification implements ShouldQueue
         $pushService = app(PushNotificationService::class);
         $title = $this->type === 'rider' ? 'Payment Processed' : 'Payment Received';
         $body = $this->type === 'rider'
-            ? "R" . number_format($this->payment->amount, 2) . " paid for your ride"
-            : "R" . number_format($this->payment->amount, 2) . " earned from ride";
+            ? 'R'.number_format($this->payment->amount, 2).' paid for your ride'
+            : 'R'.number_format($this->payment->amount, 2).' earned from ride';
 
         $pushService->sendToDevice($notifiable, [
             'title' => $title,
@@ -81,8 +81,8 @@ class PaymentReceived extends Notification implements ShouldQueue
             'payment_method' => $this->payment->method,
             'type' => $this->type,
             'message' => $this->type === 'rider'
-                ? 'Payment of R' . number_format($this->payment->amount, 2) . ' processed'
-                : 'Payment of R' . number_format($this->payment->amount, 2) . ' credited',
+                ? 'Payment of R'.number_format($this->payment->amount, 2).' processed'
+                : 'Payment of R'.number_format($this->payment->amount, 2).' credited',
         ];
     }
 }

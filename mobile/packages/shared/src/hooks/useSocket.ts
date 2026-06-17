@@ -34,7 +34,7 @@ export function useSocket({ token, enabled = true }: UseSocketOptions) {
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('[Socket] Connection error:', err.message);
+      if (__DEV__) console.warn('[Socket] Connection error:', err.message);
     });
 
     socketRef.current = socket;

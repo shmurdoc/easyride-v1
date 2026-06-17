@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Notification\RegisterTokenRequest;
+use App\Http\Requests\Api\V1\Notification\UnregisterTokenRequest;
 use App\Models\InAppNotification;
-use App\Models\PushToken;
+use App\Services\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -54,26 +56,21 @@ class NotificationController extends Controller
         return response()->json(['message' => 'All notifications marked as read.']);
     }
 
-    public function registerToken(Request $request): JsonResponse
+    public function registerToken(RegisterTokenRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'token' => 'required|string',
-            'platform' => 'required|string|in:android,ios,web',
-        ]);
+        $validated = $request->validated();
 
-        $pushService = app(\App\Services\PushNotificationService::class);
-        $pushService->registerToken($request->user(), $validated['token'], $validated['platform']);
+        $pushService = app(PushNotificationService::class);
+        $pushService->registerToken($request->user(), $validated['token'], $validated['device_type']);
 
         return response()->json(['message' => 'Push token registered.']);
     }
 
-    public function unregisterToken(Request $request): JsonResponse
+    public function unregisterToken(UnregisterTokenRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'token' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
-        $pushService = app(\App\Services\PushNotificationService::class);
+        $pushService = app(PushNotificationService::class);
         $pushService->deactivateToken($validated['token']);
 
         return response()->json(['message' => 'Push token unregistered.']);

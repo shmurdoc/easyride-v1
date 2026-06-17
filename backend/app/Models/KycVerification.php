@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KycVerification extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'user_id',
@@ -33,16 +34,25 @@ class KycVerification extends Model
     ];
 
     const STATUS_PENDING = 'pending';
+
     const STATUS_UNDER_REVIEW = 'under_review';
+
     const STATUS_APPROVED = 'approved';
+
     const STATUS_REJECTED = 'rejected';
+
     const STATUS_EXPIRED = 'expired';
 
     const TYPE_ID_DOCUMENT = 'id_document';
+
     const TYPE_DRIVERS_LICENSE = 'drivers_license';
+
     const TYPE_PROOF_OF_ADDRESS = 'proof_of_address';
+
     const TYPE_VEHICLE_REGISTRATION = 'vehicle_registration';
+
     const TYPE_VEHICLE_INSURANCE = 'vehicle_insurance';
+
     const TYPE_PSV_LICENSE = 'psv_license';
 
     public function user(): BelongsTo

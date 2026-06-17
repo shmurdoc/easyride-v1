@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Payment\DisputeRequest;
+use App\Http\Requests\Api\V1\Payment\RefundRequest;
+use App\Http\Requests\Api\V1\ProcessPaymentRequest;
+use App\Models\Dispute;
 use App\Models\Payment;
 use App\Models\Ride;
 use App\Services\CashPaymentService;
@@ -13,6 +17,7 @@ use App\Services\OzowService;
 use App\Services\PayFastService;
 use App\Services\PaymentService;
 use App\Services\RefundService;
+use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,6 +30,7 @@ class PaymentController extends Controller
         protected EscrowService $escrowService,
         protected RefundService $refundService,
         protected CashPaymentService $cashPaymentService,
+        protected StripeService $stripeService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -42,7 +48,7 @@ class PaymentController extends Controller
     public function show(Payment $payment): JsonResponse
     {
         $user = request()->user();
-        if ($payment->payer_id !== $user->id && $payment->payee_id !== $user->id && !$user->hasRole('admin')) {
+        if ($payment->payer_id !== $user->id && $payment->payee_id !== $user->id && ! $user->hasRole('admin')) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
@@ -57,11 +63,12 @@ class PaymentController extends Controller
                 ['id' => 'cash', 'name' => 'Cash', 'available' => true],
                 ['id' => 'payfast', 'name' => 'PayFast', 'available' => true],
                 ['id' => 'ozow', 'name' => 'Ozow EFT', 'available' => true],
+                ['id' => 'stripe', 'name' => 'Stripe Card', 'available' => true],
             ],
         ]);
     }
 
-    public function processRidePayment(Request $request, Ride $ride): JsonResponse
+    public function processRidePayment(ProcessPaymentRequest $request, Ride $ride): JsonResponse
     {
         if ($ride->rider_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
@@ -83,19 +90,17 @@ class PaymentController extends Controller
             ], 429);
         }
 
-        $validated = $request->validate([
-            'method' => 'required|string|in:wallet,cash,payfast,ozow',
-        ]);
-
-        $method = $validated['method'];
+        $method = $request->validated('payment_method');
 
         if ($method === 'wallet') {
             $payment = $this->escrowService->holdPayment($ride, 'wallet');
+
             return response()->json(['payment' => $payment, 'message' => 'Payment processed via wallet.'], 201);
         }
 
         if ($method === 'cash') {
             $payment = $this->cashPaymentService->processCashPayment($ride);
+
             return response()->json(['payment' => $payment, 'message' => 'Cash payment recorded.'], 201);
         }
 
@@ -147,7 +152,7 @@ class PaymentController extends Controller
                 ],
             ]);
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return response()->json(['message' => $result['error'] ?? 'Ozow payment failed.'], 502);
             }
 
@@ -155,6 +160,27 @@ class PaymentController extends Controller
                 'payment' => $payment,
                 'redirect_url' => $result['url'],
                 'message' => 'Redirect to Ozow to complete payment.',
+            ], 201);
+        }
+
+        if ($method === 'stripe') {
+            $payment = Payment::create([
+                'ride_id' => $ride->id,
+                'payer_id' => $ride->rider_id,
+                'method' => 'stripe',
+                'gateway' => 'stripe',
+                'amount' => $ride->total_fare,
+                'platform_fee' => $this->paymentService->calculatePlatformFee((float) $ride->total_fare),
+                'status' => Payment::STATUS_PENDING,
+            ]);
+
+            $intent = $this->stripeService->createPaymentIntent((float) $ride->total_fare);
+
+            return response()->json([
+                'payment' => $payment,
+                'client_secret' => $intent['client_secret'],
+                'payment_intent_id' => $intent['id'],
+                'message' => 'Confirm payment on client with Stripe Elements.',
             ], 201);
         }
 
@@ -229,17 +255,73 @@ class PaymentController extends Controller
         ]);
     }
 
-    public function refund(Request $request, Payment $payment): JsonResponse
+    public function stripeWebhook(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (!$user->hasRole('admin')) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
+        $result = $this->stripeService->handleWebhook($request);
+
+        if (isset($result['error'])) {
+            return response()->json(['error' => $result['error']], 400);
         }
 
+        if ($result['type'] === 'payment_intent.succeeded') {
+            $intentId = $result['data']->id;
+
+            $payment = Payment::where('gateway_reference', $intentId)->first();
+
+            if ($payment && $payment->status === Payment::STATUS_PENDING) {
+                $this->escrowService->holdPayment(
+                    $payment->ride,
+                    'stripe',
+                    ['gateway' => 'stripe', 'reference' => $intentId],
+                );
+            }
+        }
+
+        if ($result['type'] === 'payment_intent.payment_failed') {
+            $intentId = $result['data']->id;
+
+            $payment = Payment::where('gateway_reference', $intentId)->first();
+
+            if ($payment) {
+                $payment->update(['status' => Payment::STATUS_FAILED]);
+            }
+        }
+
+        return response()->json(['status' => 'success']);
+    }
+
+    public function createStripeIntent(Request $request): JsonResponse
+    {
         $validated = $request->validate([
-            'reason' => 'required|string|in:admin_override,driver_no_show,duplicate_charge,technical_issue',
-            'description' => 'nullable|string|max:500',
+            'amount' => 'required|numeric|min:1',
+            'currency' => 'sometimes|string|size:3',
+            'metadata' => 'sometimes|array',
         ]);
+
+        $intent = $this->stripeService->createPaymentIntent(
+            (float) $validated['amount'],
+            $validated['currency'] ?? 'zar',
+            $validated['metadata'] ?? [],
+        );
+
+        return response()->json($intent);
+    }
+
+    public function confirmStripePayment(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'payment_intent_id' => 'required|string',
+        ]);
+
+        $result = $this->stripeService->confirmPayment($validated['payment_intent_id']);
+
+        return response()->json($result);
+    }
+
+    public function refund(RefundRequest $request, Payment $payment): JsonResponse
+    {
+        $user = $request->user();
+        $validated = $request->validated();
 
         $result = $this->refundService->processRefund(
             $payment->ride,
@@ -247,20 +329,20 @@ class PaymentController extends Controller
             $user->id,
         );
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json($result, 422);
         }
 
         return response()->json($result);
     }
 
-    public function dispute(Request $request, Payment $payment): JsonResponse
+    public function dispute(DisputeRequest $request, Payment $payment): JsonResponse
     {
         if ($payment->payer_id !== $request->user()->id) {
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        if (!$this->escrowService->isWithinDisputeWindow($payment->ride)) {
+        if (! $this->escrowService->isWithinDisputeWindow($payment->ride)) {
             return response()->json(['message' => 'Dispute window has expired (24 hours after ride completion).'], 422);
         }
 
@@ -268,12 +350,9 @@ class PaymentController extends Controller
             return response()->json(['message' => 'A dispute already exists for this payment.'], 422);
         }
 
-        $validated = $request->validate([
-            'reason' => 'required|string|max:100',
-            'description' => 'required|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
-        \App\Models\Dispute::create([
+        Dispute::create([
             'ride_id' => $payment->ride_id,
             'payment_id' => $payment->id,
             'raised_by' => $request->user()->id,

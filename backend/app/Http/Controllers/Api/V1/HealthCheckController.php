@@ -20,7 +20,7 @@ class HealthCheckController extends Controller
             'disk' => $this->checkDisk(),
         ];
 
-        $healthy = !in_array(false, array_column($checks, 'status'));
+        $healthy = ! in_array(false, array_column($checks, 'status'));
 
         return response()->json([
             'status' => $healthy ? 'healthy' : 'unhealthy',
@@ -33,6 +33,7 @@ class HealthCheckController extends Controller
     {
         try {
             DB::connection()->getPdo();
+
             return ['status' => true, 'message' => 'Database connected'];
         } catch (\Exception $e) {
             return ['status' => false, 'message' => $e->getMessage()];
@@ -43,6 +44,7 @@ class HealthCheckController extends Controller
     {
         try {
             Redis::ping();
+
             return ['status' => true, 'message' => 'Redis connected'];
         } catch (\Exception $e) {
             return ['status' => false, 'message' => $e->getMessage()];
@@ -52,7 +54,7 @@ class HealthCheckController extends Controller
     private function checkCache(): array
     {
         try {
-            $key = 'health_check_' . time();
+            $key = 'health_check_'.time();
             Cache::put($key, true, 10);
             $value = Cache::get($key);
             Cache::forget($key);
@@ -66,7 +68,8 @@ class HealthCheckController extends Controller
     private function checkQueue(): array
     {
         try {
-            $size = Redis::connection()->queue()->llen('default');
+            $size = Redis::llen('queues:default');
+
             return ['status' => true, 'message' => 'Queue accessible', 'size' => $size];
         } catch (\Exception $e) {
             return ['status' => false, 'message' => $e->getMessage()];

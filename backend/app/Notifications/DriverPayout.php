@@ -28,7 +28,7 @@ class DriverPayout extends Notification implements ShouldQueue
     {
         return [
             'title' => 'Payout Processed',
-            'body' => "R" . number_format($this->amount, 2) . " has been sent to your account.",
+            'body' => 'R'.number_format($this->amount, 2).' has been sent to your account.',
         ];
     }
 
@@ -37,7 +37,7 @@ class DriverPayout extends Notification implements ShouldQueue
         return [
             'payout_id' => $this->payoutId,
             'amount' => $this->amount,
-            'message' => "R" . number_format($this->amount, 2) . " payout processed",
+            'message' => 'R'.number_format($this->amount, 2).' payout processed',
         ];
     }
 
@@ -45,7 +45,7 @@ class DriverPayout extends Notification implements ShouldQueue
     {
         app(PushNotificationService::class)->sendToDevice($notifiable, [
             'title' => 'Payout Processed',
-            'body' => "R" . number_format($this->amount, 2) . " has been sent to your account.",
+            'body' => 'R'.number_format($this->amount, 2).' has been sent to your account.',
             'channel' => 'easyryde_payments',
         ], [
             'type' => 'driver_payout',

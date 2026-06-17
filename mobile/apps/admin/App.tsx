@@ -1,10 +1,10 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@easyryde/shared';
-import { COLORS } from '@easyryde/shared';
+import { useAuth, COLORS, ErrorBoundary } from '@easyryde/shared';
 
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
@@ -31,8 +31,9 @@ function AdminTabs() {
           else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#7C3AED',
-        tabBarInactiveTintColor: COLORS.gray[400],
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textDim,
+        tabBarStyle: styles.tabBar,
         headerShown: false,
       })}
     >
@@ -46,12 +47,22 @@ function AdminTabs() {
   );
 }
 
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: COLORS.bg,
+    borderTopColor: COLORS.border,
+    borderTopWidth: 1,
+    paddingBottom: 4,
+  },
+});
+
 export default function AppLayout() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) return null;
 
   return (
+    <ErrorBoundary>
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
@@ -61,5 +72,6 @@ export default function AppLayout() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </ErrorBoundary>
   );
 }

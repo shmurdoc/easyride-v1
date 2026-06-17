@@ -98,7 +98,7 @@ class ScheduledRideService
             ->where('status', 'pending')
             ->first();
 
-        if (!$scheduled) {
+        if (! $scheduled) {
             return ['success' => false, 'error' => 'Scheduled ride not found or cannot be cancelled.'];
         }
 
