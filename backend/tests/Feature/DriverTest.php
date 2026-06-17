@@ -29,12 +29,17 @@ class DriverTest extends TestCase
         $driver = User::factory()->create();
         $driver->assignRole('driver');
 
+        $driver->driverProfile()->create([
+            'is_approved' => false,
+            'is_verified' => false,
+        ]);
+
         Sanctum::actingAs($admin);
         $response = $this->postJson("/api/v1/admin/drivers/{$driver->id}/approve");
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('users', [
-            'id' => $driver->id,
+        $this->assertDatabaseHas('driver_profiles', [
+            'user_id' => $driver->id,
             'is_approved' => true,
         ]);
     }
@@ -61,7 +66,9 @@ class DriverTest extends TestCase
         $driver->assignRole('driver');
         Sanctum::actingAs($driver);
 
-        $response = $this->postJson('/api/v1/drivers/toggle-online');
+        $response = $this->postJson('/api/v1/drivers/toggle-online', [
+            'is_online' => true,
+        ]);
 
         $response->assertStatus(200);
         $driver->refresh();
@@ -99,7 +106,7 @@ class DriverTest extends TestCase
         $response = $this->getJson('/api/v1/drivers/earnings');
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['total_earnings', 'today', 'this_week', 'this_month']);
+            ->assertJsonStructure(['total_earnings', 'today_earnings', 'pending_payout', 'total_trips']);
     }
 
     public function test_driver_can_get_trips(): void

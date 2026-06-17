@@ -38,6 +38,7 @@ class ConsentTest extends TestCase
 
         $response = $this->postJson('/api/v1/consent/grant', [
             'consent_type' => 'terms_of_service',
+            'consent_version' => '1.0',
         ]);
 
         $response->assertStatus(200)
@@ -52,6 +53,7 @@ class ConsentTest extends TestCase
 
         $this->postJson('/api/v1/consent/grant', [
             'consent_type' => 'marketing_email',
+            'consent_version' => '1.0',
         ]);
 
         $response = $this->postJson('/api/v1/consent/revoke', [
@@ -70,6 +72,7 @@ class ConsentTest extends TestCase
 
         $this->postJson('/api/v1/consent/grant', [
             'consent_type' => 'privacy_policy',
+            'consent_version' => '1.0',
         ]);
 
         $response = $this->getJson('/api/v1/consent/history');

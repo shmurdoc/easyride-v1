@@ -11,16 +11,27 @@ use Stripe\Webhook;
 
 class StripeService
 {
-    private readonly StripeClient $stripe;
+    private readonly ?StripeClient $stripe;
 
     public function __construct()
     {
-        $this->stripe = new StripeClient(config('services.stripe.secret_key'));
+        require_once dirname(__DIR__, 2).'/vendor/stripe/stripe-php/init.php';
+        $secretKey = config('services.stripe.secret_key');
+        $this->stripe = $secretKey ? new StripeClient($secretKey) : null;
+    }
+
+    private function getStripe(): StripeClient
+    {
+        if (! $this->stripe) {
+            throw new \RuntimeException('Stripe is not configured.');
+        }
+
+        return $this->stripe;
     }
 
     public function createPaymentIntent(float $amount, string $currency = 'zar'): array
     {
-        $intent = $this->stripe->paymentIntents->create([
+        $intent = $this->getStripe()->paymentIntents->create([
             'amount' => (int) round($amount * 100),
             'currency' => strtolower($currency),
         ]);
@@ -33,7 +44,7 @@ class StripeService
 
     public function confirmPayment(string $paymentIntentId): array
     {
-        $intent = $this->stripe->paymentIntents->retrieve($paymentIntentId);
+        $intent = $this->getStripe()->paymentIntents->retrieve($paymentIntentId);
 
         return [
             'id' => $intent->id,
@@ -44,7 +55,7 @@ class StripeService
 
     public function createCharge(float $amount, string $paymentMethodId, string $currency = 'zar'): array
     {
-        $intent = $this->stripe->paymentIntents->create([
+        $intent = $this->getStripe()->paymentIntents->create([
             'amount' => (int) round($amount * 100),
             'currency' => strtolower($currency),
             'payment_method' => $paymentMethodId,
@@ -67,7 +78,7 @@ class StripeService
             $params['amount'] = (int) round($amount * 100);
         }
 
-        $refund = $this->stripe->refunds->create($params);
+        $refund = $this->getStripe()->refunds->create($params);
 
         return [
             'id' => $refund->id,

@@ -24,11 +24,16 @@ class Payment extends Model
 
     const STATUS_REFUNDED = 'refunded';
 
+    const STATUS_PAID = 'paid';
+
+    const STATUS_ESCROW_HELD = 'escrow_held';
+
     protected $fillable = [
         'ride_id', 'payer_id', 'payee_id', 'method', 'gateway', 'gateway_reference',
         'amount', 'platform_fee', 'driver_payout', 'status', 'paid_at', 'gateway_response',
         'refunded_at', 'refund_reason', 'refund_amount', 'refunded_by',
         'escrow_released', 'escrow_released_at', 'dispute_hold', 'dispute_hold_shortfall',
+        'held_until',
         'cash_received', 'cash_discrepancy', 'cash_settled_at', 'cash_reconciled',
     ];
 

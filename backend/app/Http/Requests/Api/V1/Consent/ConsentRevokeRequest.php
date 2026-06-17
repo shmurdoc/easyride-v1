@@ -11,7 +11,7 @@ class ConsentRevokeRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
-            'consent_type' => 'required|string|in:location_tracking,marketing,data_sharing',
+            'consent_type' => 'required|string|in:terms_of_service,privacy_policy,marketing_email,marketing_sms,location_tracking,data_sharing_partners',
         ];
     }
 }

@@ -22,14 +22,14 @@ class SosController extends Controller
     {
         $validated = $request->validated();
 
-        $ride = Ride::find($validated['ride_id']);
+        $ride = isset($validated['ride_id']) ? Ride::find($validated['ride_id']) : null;
 
         $alert = $this->sosService->triggerSos(
             $request->user(),
             $ride,
             $validated['latitude'],
             $validated['longitude'],
-            $validated['alert_type'],
+            $validated['alert_type'] ?? '',
         );
 
         return response()->json([

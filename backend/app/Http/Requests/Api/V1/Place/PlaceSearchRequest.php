@@ -11,7 +11,7 @@ class PlaceSearchRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
-            'query' => 'required|string|max:255',
+            'query' => 'required|string|min:2|max:255',
             'limit' => 'nullable|integer|min:1|max:20',
         ];
     }

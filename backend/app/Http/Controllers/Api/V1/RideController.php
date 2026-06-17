@@ -80,7 +80,7 @@ class RideController extends Controller
 
         Event::dispatch(new NewRideRequest($ride));
 
-        return response()->json($ride->load('rider'), 201);
+        return response()->json(['ride' => $ride->load('rider')], 201);
     }
 
     public function show(Ride $ride): JsonResponse

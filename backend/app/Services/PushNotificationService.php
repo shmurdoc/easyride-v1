@@ -15,10 +15,17 @@ class PushNotificationService
 
     private const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 
+    private ?string $projectId = null;
+
+    private ?string $serviceAccountPath = null;
+
     public function __construct(
-        private readonly string $projectId,
-        private readonly string $serviceAccountPath,
-    ) {}
+        ?string $projectId = null,
+        ?string $serviceAccountPath = null,
+    ) {
+        $this->projectId = $projectId ?? config('services.fcm.project_id');
+        $this->serviceAccountPath = $serviceAccountPath ?? config('services.fcm.service_account_path');
+    }
 
     public function sendToDevice(User $user, array $notification, array $data = []): array
     {

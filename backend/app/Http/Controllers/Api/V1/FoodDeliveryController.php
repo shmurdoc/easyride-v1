@@ -128,6 +128,7 @@ class FoodDeliveryController extends Controller
                 $order,
                 'cancelled',
                 $request->input('reason', 'Cancelled by customer'),
+                cancelledBy: $request->user()->id,
             );
 
             return response()->json($order);

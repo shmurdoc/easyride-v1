@@ -11,7 +11,7 @@ class ReferralApplyRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
-            'code' => 'required|string|exists:referral_codes,code',
+            'code' => 'required|string',
         ];
     }
 }

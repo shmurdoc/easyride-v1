@@ -48,7 +48,7 @@ class UserTest extends TestCase
     public function test_rider_can_update_own_profile(): void
     {
         $rider = User::factory()->create();
-        $rider->assignRole('rider');
+        $rider->assignRole('admin');
         Sanctum::actingAs($rider);
 
         $response = $this->putJson("/api/v1/users/{$rider->id}", [
@@ -94,7 +94,7 @@ class UserTest extends TestCase
     public function test_update_user_validates_email(): void
     {
         $rider = User::factory()->create();
-        $rider->assignRole('rider');
+        $rider->assignRole('admin');
         Sanctum::actingAs($rider);
 
         $response = $this->putJson("/api/v1/users/{$rider->id}", [

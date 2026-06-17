@@ -56,12 +56,12 @@ class DeliveryController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        return response()->json($delivery, 201);
+        return response()->json(['delivery' => $delivery], 201);
     }
 
     public function show(Delivery $delivery): JsonResponse
     {
-        return response()->json($delivery->load(['sender', 'driver', 'ride']));
+        return response()->json(['delivery' => $delivery->load(['sender', 'driver', 'ride'])]);
     }
 
     public function updateStatus(UpdateStatusRequest $request, Delivery $delivery): JsonResponse

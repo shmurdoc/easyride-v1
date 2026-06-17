@@ -74,18 +74,22 @@ class ChatService
 
     private function broadcastMessage(Ride $ride, RideChatMessage $message): void
     {
-        $socketService = app(SocketService::class);
+        try {
+            $socketService = app(SocketService::class);
 
-        $payload = [
-            'message_id' => $message->id,
-            'ride_id' => $ride->id,
-            'sender_id' => $message->sender_id,
-            'sender_name' => $message->sender->name ?? 'Unknown',
-            'message' => $message->message,
-            'is_system' => $message->is_system,
-            'created_at' => $message->created_at->toIso8601String(),
-        ];
+            $payload = [
+                'message_id' => $message->id,
+                'ride_id' => $ride->id,
+                'sender_id' => $message->sender_id,
+                'sender_name' => $message->sender->name ?? 'Unknown',
+                'message' => $message->message,
+                'is_system' => $message->is_system,
+                'created_at' => $message->created_at->toIso8601String(),
+            ];
 
-        $socketService->broadcast("ride.{$ride->id}", 'chat:message', $payload);
+            $socketService->broadcast("ride.{$ride->id}", 'chat:message', $payload);
+        } catch (\Exception $e) {
+            logger()->warning('Failed to broadcast chat message', ['error' => $e->getMessage()]);
+        }
     }
 }

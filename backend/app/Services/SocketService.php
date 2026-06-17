@@ -47,7 +47,7 @@ class SocketService
         }
     }
 
-    private static function broadcast(string $channel, string $event, array $data): void
+    public static function broadcast(string $channel, string $event, array $data): void
     {
         $payload = json_encode([
             'event' => $event,

@@ -43,7 +43,7 @@ class PaymentTest extends TestCase
 
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/payments/rides/{$ride->id}/pay", [
-            'method' => 'cash',
+            'payment_method' => 'cash',
         ]);
 
         $response->assertStatus(201);
@@ -61,6 +61,9 @@ class PaymentTest extends TestCase
         $rider = User::factory()->create();
         $rider->assignRole('rider');
 
+        $driver = User::factory()->create();
+        $driver->assignRole('driver');
+
         $wallet = Wallet::create([
             'user_id' => $rider->id,
             'balance' => 500.00,
@@ -68,6 +71,7 @@ class PaymentTest extends TestCase
 
         $ride = Ride::create([
             'rider_id' => $rider->id,
+            'driver_id' => $driver->id,
             'status' => 'completed',
             'category' => 'standard',
             'pickup_latitude' => -23.9468,
@@ -81,12 +85,12 @@ class PaymentTest extends TestCase
 
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/payments/rides/{$ride->id}/pay", [
-            'method' => 'wallet',
+            'payment_method' => 'wallet',
         ]);
 
         $response->assertStatus(201);
         $wallet->refresh();
-        $this->assertEquals(350.0, $wallet->balance);
+        $this->assertEquals(200.0, $wallet->balance);
     }
 
     public function test_rider_can_get_payment_history(): void
@@ -118,8 +122,22 @@ class PaymentTest extends TestCase
         $rider = User::factory()->create();
         $rider->assignRole('rider');
 
+        $ride = Ride::create([
+            'rider_id' => $rider->id,
+            'driver_id' => null,
+            'status' => 'completed',
+            'category' => 'standard',
+            'pickup_latitude' => -23.9468,
+            'pickup_longitude' => 29.4726,
+            'pickup_address' => '123 Main St',
+            'dropoff_latitude' => -23.9500,
+            'dropoff_longitude' => 29.4800,
+            'dropoff_address' => '456 Oak Ave',
+            'total_fare' => 200.00,
+        ]);
+
         $payment = Payment::create([
-            'ride_id' => null,
+            'ride_id' => $ride->id,
             'payer_id' => $rider->id,
             'amount' => 200.00,
             'method' => 'cash',
@@ -130,7 +148,7 @@ class PaymentTest extends TestCase
         Sanctum::actingAs($admin);
         $response = $this->postJson("/api/v1/payments/{$payment->id}/refund", [
             'amount' => 200.00,
-            'reason' => 'Duplicate charge',
+            'reason' => 'duplicate_charge',
         ]);
 
         $response->assertStatus(200);
@@ -168,8 +186,23 @@ class PaymentTest extends TestCase
         $rider = User::factory()->create();
         $rider->assignRole('rider');
 
+        $ride = Ride::create([
+            'rider_id' => $rider->id,
+            'driver_id' => null,
+            'status' => 'completed',
+            'category' => 'standard',
+            'pickup_latitude' => -23.9468,
+            'pickup_longitude' => 29.4726,
+            'pickup_address' => '123 Main St',
+            'dropoff_latitude' => -23.9500,
+            'dropoff_longitude' => 29.4800,
+            'dropoff_address' => '456 Oak Ave',
+            'total_fare' => 150.00,
+            'completed_at' => now(),
+        ]);
+
         $payment = Payment::create([
-            'ride_id' => null,
+            'ride_id' => $ride->id,
             'payer_id' => $rider->id,
             'amount' => 150.00,
             'method' => 'cash',
@@ -180,9 +213,10 @@ class PaymentTest extends TestCase
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/payments/{$payment->id}/dispute", [
             'reason' => 'Charged wrong amount',
+            'description' => 'I was charged 150 but the ride was only supposed to be 100',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(201);
     }
 
     public function test_rider_can_get_payment_methods(): void
@@ -200,7 +234,7 @@ class PaymentTest extends TestCase
     public function test_unauthenticated_cannot_pay(): void
     {
         $response = $this->postJson('/api/v1/payments/rides/1/pay', [
-            'method' => 'cash',
+            'payment_method' => 'cash',
         ]);
 
         $response->assertStatus(401);
@@ -226,7 +260,7 @@ class PaymentTest extends TestCase
 
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/payments/rides/{$ride->id}/pay", [
-            'method' => 'cash',
+            'payment_method' => 'cash',
         ]);
 
         $response->assertStatus(201);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\PromoCode;
 use App\Models\Ride;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,13 +28,14 @@ class RideTest extends TestCase
         Sanctum::actingAs($rider);
 
         $response = $this->postJson('/api/v1/rides', [
-            'pickup_latitude' => -23.9468,
-            'pickup_longitude' => 29.4726,
+            'pickup_lat' => -23.9468,
+            'pickup_lng' => 29.4726,
             'pickup_address' => 'Phalaborwa CBD',
-            'dropoff_latitude' => -23.9500,
-            'dropoff_longitude' => 29.4800,
+            'dropoff_lat' => -23.9500,
+            'dropoff_lng' => 29.4800,
             'dropoff_address' => 'Phalaborwa Airport',
             'category' => 'standard',
+            'payment_method' => 'cash',
         ]);
 
         $response->assertStatus(201)
@@ -89,7 +91,9 @@ class RideTest extends TestCase
             'total_fare' => 150.00,
         ]);
 
-        $response = $this->postJson("/api/v1/rides/{$ride->id}/cancel");
+        $response = $this->postJson("/api/v1/rides/{$ride->id}/cancel", [
+            'cancellation_reason' => 'Changed my mind',
+        ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('rides', [
@@ -145,7 +149,7 @@ class RideTest extends TestCase
         $ride = Ride::create([
             'rider_id' => $rider->id,
             'driver_id' => $driver->id,
-            'status' => 'accepted',
+            'status' => 'arrived',
             'category' => 'standard',
             'pickup_latitude' => -23.9468,
             'pickup_longitude' => 29.4726,
@@ -222,16 +226,16 @@ class RideTest extends TestCase
 
         Sanctum::actingAs($rider);
         $response = $this->postJson("/api/v1/rides/{$ride->id}/rate", [
-            'rating' => 5,
+            'score' => 5,
             'comment' => 'Great ride!',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(201);
         $this->assertDatabaseHas('ratings', [
             'ride_id' => $ride->id,
             'rater_id' => $rider->id,
             'ratee_id' => $driver->id,
-            'rating' => 5,
+            'score' => 5,
         ]);
     }
 
@@ -294,8 +298,18 @@ class RideTest extends TestCase
             'total_fare' => 150.00,
         ]);
 
+        $promo = PromoCode::create([
+            'tenant_id' => $rider->tenant_id,
+            'code' => 'WELCOME10',
+            'type' => 'percentage',
+            'value' => 10,
+            'is_active' => true,
+            'starts_at' => now()->subDay(),
+            'expires_at' => now()->addDays(30),
+        ]);
+
         $response = $this->postJson("/api/v1/rides/{$ride->id}/apply-promo", [
-            'promo_code' => 'WELCOME10',
+            'code' => 'WELCOME10',
         ]);
 
         $response->assertStatus(200);

@@ -57,7 +57,7 @@ class NotificationTest extends TestCase
         $response = $this->getJson('/api/v1/notifications/unread-count');
 
         $response->assertStatus(200)
-            ->assertJsonPath('count', 1);
+            ->assertJsonPath('unread_count', 1);
     }
 
     public function test_rider_can_mark_notification_read(): void
@@ -121,7 +121,7 @@ class NotificationTest extends TestCase
 
         $response = $this->postJson('/api/v1/notifications/register-token', [
             'token' => 'fcm-token-12345',
-            'platform' => 'android',
+            'device_type' => 'android',
         ]);
 
         $response->assertStatus(200);
@@ -149,8 +149,9 @@ class NotificationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('push_tokens', [
+        $this->assertDatabaseHas('push_tokens', [
             'token' => 'fcm-token-12345',
+            'is_active' => false,
         ]);
     }
 

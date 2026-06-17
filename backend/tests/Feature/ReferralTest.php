@@ -63,7 +63,8 @@ class ReferralTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('error', 'Invalid referral code.');
     }
 
     public function test_user_can_view_referral_stats(): void

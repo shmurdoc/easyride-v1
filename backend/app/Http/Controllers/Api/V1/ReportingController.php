@@ -103,12 +103,17 @@ class ReportingController extends Controller
             default => 'Y-m-d',
         };
 
+        $driver = DB::connection()->getDriverName();
+        $periodExpr = $driver === 'pgsql'
+            ? "TO_CHAR(created_at, '{$periodFormat}')"
+            : "strftime('{$periodFormat}', created_at)";
+
         $revenue = Ride::where('tenant_id', $request->user()->tenant_id)
             ->where('status', 'completed')
             ->where('created_at', '>=', $from)
             ->where('created_at', '<=', $to)
             ->select(
-                DB::raw("TO_CHAR(created_at, '{$periodFormat}') as period"),
+                DB::raw("{$periodExpr} as period"),
                 DB::raw('COUNT(*) as total_rides'),
                 DB::raw('SUM(total_fare) as total_revenue'),
                 DB::raw('AVG(total_fare) as avg_fare'),
@@ -116,6 +121,42 @@ class ReportingController extends Controller
             )
             ->groupBy('period')
             ->orderBy('period')
+            ->get();
+
+        return response()->json($revenue);
+    }
+
+    public function rides(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+        $days = (int) ($request->days ?? 30);
+        $from = now()->subDays($days);
+
+        $rides = Ride::where('tenant_id', $tenantId)
+            ->where('created_at', '>=', $from)
+            ->select('id', 'status', 'total_fare', 'distance_km', 'duration_minutes', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($rides);
+    }
+
+    public function revenueExport(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+        $days = (int) ($request->days ?? 30);
+        $from = now()->subDays($days);
+
+        $revenue = Ride::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->where('created_at', '>=', $from)
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as total_rides'),
+                DB::raw('SUM(total_fare) as total_revenue'),
+            )
+            ->groupBy('date')
+            ->orderBy('date')
             ->get();
 
         return response()->json($revenue);

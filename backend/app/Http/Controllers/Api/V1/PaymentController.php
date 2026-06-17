@@ -290,6 +290,11 @@ class PaymentController extends Controller
         return response()->json(['status' => 'success']);
     }
 
+    public function twilioWebhook(Request $request): JsonResponse
+    {
+        return response()->json(['status' => 'received']);
+    }
+
     public function createStripeIntent(Request $request): JsonResponse
     {
         $validated = $request->validate([

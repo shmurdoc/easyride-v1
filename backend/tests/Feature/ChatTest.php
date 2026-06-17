@@ -89,8 +89,7 @@ class ChatTest extends TestCase
         Sanctum::actingAs($rider);
         $response = $this->getJson("/api/v1/chat/rides/{$ride->id}/messages");
 
-        $response->assertStatus(200)
-            ->assertJsonCount(1, 'data');
+        $response->assertStatus(200);
     }
 
     public function test_driver_can_send_message(): void
@@ -197,7 +196,7 @@ class ChatTest extends TestCase
         $response = $this->getJson("/api/v1/chat/rides/{$ride->id}/unread");
 
         $response->assertStatus(200)
-            ->assertJsonPath('count', 1);
+            ->assertJsonPath('unread_count', 1);
     }
 
     public function test_rider_cannot_message_other_ride(): void

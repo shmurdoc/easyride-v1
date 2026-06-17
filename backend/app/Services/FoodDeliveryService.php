@@ -138,7 +138,7 @@ class FoodDeliveryService
         });
     }
 
-    public function updateStatus(FoodOrder $order, string $newStatus, ?string $reason = null): FoodOrder
+    public function updateStatus(FoodOrder $order, string $newStatus, ?string $reason = null, ?string $cancelledBy = null): FoodOrder
     {
         $allowed = self::STATUS_FLOW[$order->status] ?? [];
         if (! in_array($newStatus, $allowed)) {
@@ -151,7 +151,7 @@ class FoodDeliveryService
 
         if ($newStatus === 'cancelled') {
             $updates['cancelled_at'] = now();
-            $updates['cancelled_by'] = $reason;
+            $updates['cancelled_by'] = $cancelledBy;
             $updates['cancellation_reason'] = $reason;
         }
 

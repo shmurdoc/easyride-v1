@@ -27,7 +27,7 @@ class IncidentTest extends TestCase
         Sanctum::actingAs($rider);
 
         $response = $this->postJson('/api/v1/incidents', [
-            'incident_type' => 'safety_concern',
+            'incident_type' => 'other',
             'severity' => 'medium',
             'title' => 'Safety concern',
             'description' => 'There was a safety issue during the ride.',
@@ -135,6 +135,7 @@ class IncidentTest extends TestCase
         Sanctum::actingAs($admin);
         $response = $this->postJson("/api/v1/admin/compliance/incidents/{$incident->id}/resolve", [
             'resolution' => 'Issue resolved',
+            'status' => 'resolved',
         ]);
 
         $response->assertOk()
@@ -177,7 +178,7 @@ class IncidentTest extends TestCase
     public function test_unauthenticated_cannot_report_incident(): void
     {
         $response = $this->postJson('/api/v1/incidents', [
-            'incident_type' => 'safety_concern',
+            'incident_type' => 'other',
             'severity' => 'medium',
             'title' => 'Test',
             'description' => 'Test description',

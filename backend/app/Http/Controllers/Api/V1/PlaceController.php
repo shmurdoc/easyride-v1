@@ -18,15 +18,16 @@ class PlaceController extends Controller
         $validated = $request->validated();
 
         $query = trim($validated['query']);
-        $cacheKey = 'places:search:'.md5($query);
+        $limit = (int) ($validated['limit'] ?? 8);
+        $cacheKey = 'places:search:'.md5($query).':'.$limit;
 
-        $results = Cache::remember($cacheKey, 3600, function () use ($query) {
+        $results = Cache::remember($cacheKey, 3600, function () use ($query, $limit) {
             $response = Http::withHeaders(['User-Agent' => 'EasyRyde/1.0'])
                 ->timeout(5)
                 ->get('https://nominatim.openstreetmap.org/search', [
                     'q' => $query,
                     'format' => 'json',
-                    'limit' => 8,
+                    'limit' => $limit,
                 ]);
 
             if (! $response->successful()) {

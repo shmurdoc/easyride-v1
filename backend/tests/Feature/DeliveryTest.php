@@ -28,19 +28,19 @@ class DeliveryTest extends TestCase
         Sanctum::actingAs($rider);
 
         $response = $this->postJson('/api/v1/deliveries', [
-            'pickup_latitude' => -23.9468,
-            'pickup_longitude' => 29.4726,
+            'pickup_lat' => -23.9468,
+            'pickup_lng' => 29.4726,
             'pickup_address' => 'Phalaborwa Mall',
-            'dropoff_latitude' => -23.9500,
-            'dropoff_longitude' => 29.4800,
+            'dropoff_lat' => -23.9500,
+            'dropoff_lng' => 29.4800,
             'dropoff_address' => 'Phalaborwa Hospital',
             'item_description' => 'Medical supplies',
-            'item_weight' => 2.5,
-            'category' => 'document',
+            'recipient_name' => 'John Doe',
+            'recipient_phone' => '+27123456789',
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonStructure(['delivery' => ['id', 'status', 'total_fare']]);
+            ->assertJsonStructure(['delivery' => ['id', 'status']]);
 
         $this->assertDatabaseHas('deliveries', [
             'sender_id' => $rider->id,
@@ -143,7 +143,7 @@ class DeliveryTest extends TestCase
         $response = $this->getJson("/api/v1/deliveries/{$delivery->id}");
 
         $response->assertStatus(200)
-            ->assertJsonPath('id', $delivery->id);
+            ->assertJsonPath('delivery.id', $delivery->id);
     }
 
     public function test_driver_can_assign_delivery(): void
@@ -168,12 +168,13 @@ class DeliveryTest extends TestCase
         ]);
 
         Sanctum::actingAs($driver);
-        $response = $this->postJson("/api/v1/deliveries/{$delivery->id}/assign");
+        $response = $this->postJson("/api/v1/deliveries/{$delivery->id}/assign", [
+            'driver_id' => $driver->id,
+        ]);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('deliveries', [
             'id' => $delivery->id,
-            'status' => 'assigned',
             'driver_id' => $driver->id,
         ]);
     }

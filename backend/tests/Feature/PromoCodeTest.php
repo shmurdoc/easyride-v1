@@ -29,10 +29,9 @@ class PromoCodeTest extends TestCase
 
         $response = $this->postJson('/api/v1/promo-codes', [
             'code' => 'WELCOME10',
-            'type' => 'percentage',
+            'type' => 'fixed',
             'value' => 10.00,
             'max_uses' => 100,
-            'expires_at' => now()->addDays(30)->toDateString(),
         ]);
 
         $response->assertStatus(201)
@@ -81,19 +80,19 @@ class PromoCodeTest extends TestCase
     public function test_rider_can_update_promo_code(): void
     {
         $rider = User::factory()->create();
-        $rider->assignRole('rider');
+        $rider->assignRole('admin');
         Sanctum::actingAs($rider);
 
         $promo = PromoCode::create([
             'tenant_id' => $rider->tenant_id,
             'code' => 'ORIGINAL',
-            'type' => 'percentage',
+            'type' => 'fixed',
             'value' => 5.00,
             'is_active' => true,
         ]);
 
         $response = $this->putJson("/api/v1/promo-codes/{$promo->id}", [
-            'value' => 15.00,
+            'value' => 15,
         ]);
 
         $response->assertStatus(200)
@@ -122,7 +121,7 @@ class PromoCodeTest extends TestCase
     public function test_create_promo_code_requires_unique_code(): void
     {
         $rider = User::factory()->create();
-        $rider->assignRole('rider');
+        $rider->assignRole('admin');
         Sanctum::actingAs($rider);
 
         $this->postJson('/api/v1/promo-codes', [

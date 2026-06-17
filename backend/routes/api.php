@@ -55,6 +55,7 @@ Route::prefix('v1')->group(function () {
         Route::post('partner/order', [PartnerWebhookController::class, 'receiveOrder']);
         Route::post('partner/status', [PartnerWebhookController::class, 'orderStatus']);
         Route::post('stripe', [PaymentController::class, 'stripeWebhook']);
+        Route::post('twilio', [PaymentController::class, 'twilioWebhook']);
     });
 
     // Public discovery routes
@@ -214,10 +215,12 @@ Route::prefix('v1')->group(function () {
         });
 
         // Reporting (admin)
-        Route::prefix('reports')->middleware('role:admin|super-admin')->group(function () {
+        Route::prefix('admin/reports')->middleware('role:admin|super-admin')->group(function () {
             Route::get('dashboard', [ReportingController::class, 'dashboard']);
             Route::get('revenue', [ReportingController::class, 'revenue']);
             Route::get('drivers', [ReportingController::class, 'drivers']);
+            Route::get('rides', [ReportingController::class, 'rides']);
+            Route::get('revenue/export', [ReportingController::class, 'revenueExport']);
         });
 
         // Admin

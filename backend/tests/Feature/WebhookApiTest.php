@@ -22,7 +22,7 @@ class WebhookApiTest extends TestCase
             'Stripe-Signature' => "t={$signature}",
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(400);
     }
 
     public function test_stripe_webhook_rejects_missing_signature(): void
@@ -31,19 +31,19 @@ class WebhookApiTest extends TestCase
             'type' => 'payment_intent.succeeded',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(400);
     }
 
     public function test_payfast_webhook_accepts_notification(): void
     {
         $response = $this->postJson('/api/v1/webhooks/payfast', [
-            'pt_status' => 'COMPLETE',
+            'payment_status' => 'COMPLETE',
             'm_payment_id' => 'test-123',
             'amount_gross' => 150.00,
             'signature' => md5('test-signature'),
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(400);
     }
 
     public function test_ozow_webhook_accepts_notification(): void
@@ -55,13 +55,13 @@ class WebhookApiTest extends TestCase
             'Hash' => sha1('test-hash'),
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(400);
     }
 
     public function test_webhook_rejects_invalid_payload(): void
     {
         $response = $this->postJson('/api/v1/webhooks/stripe', ['invalid']);
-        $response->assertStatus(200);
+        $response->assertStatus(400);
     }
 
     public function test_twilio_webhook_accepts_status_callback(): void

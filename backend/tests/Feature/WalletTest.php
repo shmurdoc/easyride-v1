@@ -79,7 +79,7 @@ class WalletTest extends TestCase
             'payment_method' => 'payfast',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(201);
     }
 
     public function test_rider_can_withdraw_from_wallet(): void
@@ -95,9 +95,12 @@ class WalletTest extends TestCase
         Sanctum::actingAs($rider);
         $response = $this->postJson('/api/v1/wallet/withdraw', [
             'amount' => 100.00,
+            'bank_account' => '1234567890',
+            'bank_code' => '123',
+            'bank_name' => 'Test Bank',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(201);
     }
 
     public function test_withdraw_fails_insufficient_balance(): void
@@ -113,6 +116,9 @@ class WalletTest extends TestCase
         Sanctum::actingAs($rider);
         $response = $this->postJson('/api/v1/wallet/withdraw', [
             'amount' => 100.00,
+            'bank_account' => '1234567890',
+            'bank_code' => '123',
+            'bank_name' => 'Test Bank',
         ]);
 
         $response->assertStatus(422);
