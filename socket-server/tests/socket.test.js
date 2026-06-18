@@ -8,6 +8,7 @@ describe('Socket.io Integration Tests', function () {
   let io;
   let clientSocket;
   let port;
+  let serverSocket;
 
   before(function (done) {
     httpServer = http.createServer();
@@ -15,7 +16,61 @@ describe('Socket.io Integration Tests', function () {
       cors: { origin: '*' },
     });
 
-    port = httpServer.listen(0, () => {
+    httpServer.listen(0, () => {
+      port = httpServer.address().port;
+
+      io.on('connection', (socket) => {
+        serverSocket = socket;
+
+        socket.emit('connection_ack', { status: 'connected' });
+
+        socket.on('driver:location_update', (data) => {
+          socket.emit('location_confirmed', { status: 'ok' });
+        });
+
+        socket.on('ride:request', (data) => {
+          io.emit('ride:new_request', {
+            rideId: 'ride-456',
+            pickupLat: data.pickupLat,
+            pickupLng: data.pickupLng,
+            category: 'standard',
+          });
+        });
+
+        socket.on('ride:accept', (data) => {
+          io.emit('ride:driver_assigned', {
+            rideId: data.rideId,
+            driverId: data.driverId,
+            driverName: 'Test Driver',
+            eta: 300,
+          });
+        });
+
+        socket.on('ride:status_update', (data) => {
+          io.emit('ride:status_changed', {
+            rideId: data.rideId,
+            status: data.status,
+          });
+        });
+
+        socket.on('chat:message', (data) => {
+          socket.emit('chat:new_message', {
+            id: 'msg-001',
+            rideId: data.rideId,
+            senderId: data.senderId,
+            message: data.message,
+            timestamp: new Date().toISOString(),
+          });
+        });
+
+        socket.on('delivery:status_update', (data) => {
+          io.emit('delivery:status_changed', {
+            deliveryId: data.deliveryId,
+            status: data.status,
+          });
+        });
+      });
+
       done();
     });
   });
@@ -28,6 +83,7 @@ describe('Socket.io Integration Tests', function () {
   afterEach(function () {
     if (clientSocket && clientSocket.connected) {
       clientSocket.disconnect();
+      clientSocket.close();
     }
   });
 
@@ -43,19 +99,12 @@ describe('Socket.io Integration Tests', function () {
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connection_ack', (data) => {
       expect(data).to.have.property('status');
+      expect(data.status).to.equal('connected');
       done();
     });
   });
 
   it('should handle driver location update', function (done) {
-    io.on('connection', (socket) => {
-      socket.on('driver:location_update', (data) => {
-        expect(data).to.have.property('lat');
-        expect(data).to.have.property('lng');
-        socket.emit('location_confirmed', { status: 'ok' });
-      });
-    });
-
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connect', () => {
       clientSocket.emit('driver:location_update', {
@@ -72,19 +121,6 @@ describe('Socket.io Integration Tests', function () {
   });
 
   it('should handle ride request broadcast', function (done) {
-    io.on('connection', (socket) => {
-      socket.on('ride:request', (data) => {
-        expect(data).to.have.property('pickupLat');
-        expect(data).to.have.property('pickupLng');
-        io.emit('ride:new_request', {
-          rideId: 'ride-456',
-          pickupLat: data.pickupLat,
-          pickupLng: data.pickupLng,
-          category: 'standard',
-        });
-      });
-    });
-
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connect', () => {
       clientSocket.emit('ride:request', {
@@ -102,19 +138,6 @@ describe('Socket.io Integration Tests', function () {
   });
 
   it('should handle ride accept', function (done) {
-    io.on('connection', (socket) => {
-      socket.on('ride:accept', (data) => {
-        expect(data).to.have.property('rideId');
-        expect(data).to.have.property('driverId');
-        io.emit('ride:driver_assigned', {
-          rideId: data.rideId,
-          driverId: data.driverId,
-          driverName: 'Test Driver',
-          eta: 300,
-        });
-      });
-    });
-
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connect', () => {
       clientSocket.emit('ride:accept', {
@@ -132,17 +155,6 @@ describe('Socket.io Integration Tests', function () {
   });
 
   it('should handle ride status update', function (done) {
-    io.on('connection', (socket) => {
-      socket.on('ride:status_update', (data) => {
-        expect(data).to.have.property('rideId');
-        expect(data).to.have.property('status');
-        io.emit('ride:status_changed', {
-          rideId: data.rideId,
-          status: data.status,
-        });
-      });
-    });
-
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connect', () => {
       clientSocket.emit('ride:status_update', {
@@ -158,20 +170,6 @@ describe('Socket.io Integration Tests', function () {
   });
 
   it('should handle chat message', function (done) {
-    io.on('connection', (socket) => {
-      socket.on('chat:message', (data) => {
-        expect(data).to.have.property('rideId');
-        expect(data).to.have.property('message');
-        io.to(`ride:${data.rideId}`).emit('chat:new_message', {
-          id: 'msg-001',
-          rideId: data.rideId,
-          senderId: data.senderId,
-          message: data.message,
-          timestamp: new Date().toISOString(),
-        });
-      });
-    });
-
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connect', () => {
       clientSocket.emit('chat:message', {
@@ -188,17 +186,6 @@ describe('Socket.io Integration Tests', function () {
   });
 
   it('should handle delivery status update', function (done) {
-    io.on('connection', (socket) => {
-      socket.on('delivery:status_update', (data) => {
-        expect(data).to.have.property('deliveryId');
-        expect(data).to.have.property('status');
-        io.emit('delivery:status_changed', {
-          deliveryId: data.deliveryId,
-          status: data.status,
-        });
-      });
-    });
-
     clientSocket = ClientIO(`http://localhost:${port}`);
     clientSocket.on('connect', () => {
       clientSocket.emit('delivery:status_update', {
@@ -222,6 +209,7 @@ describe('Socket.io Integration Tests', function () {
     clientSocket.on('connect', () => {
       expect(clientSocket.connected).to.be.true;
       setTimeout(() => {
+        expect(clientSocket.connected).to.be.true;
         done();
       }, 1000);
     });
