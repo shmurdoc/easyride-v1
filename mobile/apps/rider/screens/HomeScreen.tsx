@@ -54,6 +54,8 @@ export default function HomeScreen({ navigation, route }: { navigation: RiderNav
       navigation.navigate('BookRide');
     } else if (cat.route) {
       navigation.navigate(cat.route as any);
+    } else {
+      Alert.alert('Coming Soon', `${cat.label} feature is coming soon!`);
     }
   };
 

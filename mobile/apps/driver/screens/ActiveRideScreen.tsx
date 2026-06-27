@@ -34,7 +34,7 @@ export default function ActiveRideScreen({ route, navigation }: { route: DriverR
       }),
     ];
     return () => { unsubs.forEach(u => u()); };
-  }, [isConnected]);
+  }, [isConnected, emit, on, navigation, rideId, riderId]);
 
   useEffect(() => {
     if (!ride?.route_polyline) return;

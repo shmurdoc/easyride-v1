@@ -20,7 +20,7 @@ export default function RideRequestsScreen({ navigation }: { navigation: DriverN
       );
     });
     return () => unsub();
-  }, []);
+  }, [on]);
 
   const acceptRide = (request: any) => {
     emit('driver:accept-ride', { rideId: request.rideId, riderId: request.riderId });

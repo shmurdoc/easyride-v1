@@ -8,6 +8,7 @@ import type { DriverNav } from '@easyryde/shared';
 
 const LOCATION_TASK_NAME = 'easyryde-background-location';
 
+if (!TaskManager.isTaskDefined(LOCATION_TASK_NAME)) {
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }: any) => {
   if (error || !data) return;
   const { locations } = data;
@@ -15,6 +16,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }: any) => {
   const { latitude, longitude } = locations[locations.length - 1].coords;
   try { await drivers.updateLocation(latitude, longitude); } catch (err) { console.warn('Failed to update location:', err); }
 });
+}
 
 export default function DashboardScreen({ navigation }: { navigation: DriverNav }) {
   const { user, token } = useAuth();
@@ -221,7 +223,7 @@ export default function DashboardScreen({ navigation }: { navigation: DriverNav 
       </View>
 
       {isOnline && (
-        <TouchableOpacity onPress={() => navigation.navigate('FoodDelivery')}>
+        <TouchableOpacity onPress={() => navigation.navigate('Food')}>
           <GlassCard glow style={{ marginHorizontal: SPACING.base, marginTop: SPACING.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <GradientText colors={GRADIENTS.primary} style={{ fontSize: 18, fontWeight: '400', lineHeight: 27 }}>Food Orders Available</GradientText>
             <GradientText colors={GRADIENTS.primary} style={{ fontSize: 20, fontWeight: '600', lineHeight: 28 }}>{pendingFoodOrders}</GradientText>

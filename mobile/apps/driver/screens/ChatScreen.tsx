@@ -22,7 +22,7 @@ export default function ChatScreen({ route }: { route: DriverRoute<'Chat'> }) {
       on('chat:history', (data: any) => setMessages(data.messages || [])),
     ];
     return () => { unsubs.forEach(u => u()); };
-  }, [isConnected]);
+  }, [isConnected, on]);
 
   const sendMessage = () => {
     if (!input.trim() || !user) return;

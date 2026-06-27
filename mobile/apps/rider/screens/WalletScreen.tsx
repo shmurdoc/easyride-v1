@@ -182,9 +182,6 @@ export default function WalletScreen() {
           })
         )}
       </ScrollView>
-    </View>
-  );
-}
 
       <Modal visible={showDepositModal} transparent animationType="slide" onRequestClose={() => setShowDepositModal(false)}>
         <View style={styles.modalOverlay}>
@@ -227,6 +224,9 @@ export default function WalletScreen() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {

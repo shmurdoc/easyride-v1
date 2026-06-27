@@ -40,6 +40,7 @@ export default function LoginScreen({ navigation }: { navigation: RiderAuthNav }
           </Typography>
         </TouchableOpacity>
 
+        {__DEV__ && (
         <TouchableOpacity
           onPress={() => { setEmail('rider@easyryde.com'); setPassword('password'); }}
           style={{ marginTop: SPACING.xl, padding: SPACING.base, borderRadius: 12, borderWidth: 1, borderColor: COLORS.primary + '40', backgroundColor: COLORS.primary + '10' }}
@@ -48,6 +49,7 @@ export default function LoginScreen({ navigation }: { navigation: RiderAuthNav }
             Quick Demo Login
           </Typography>
         </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
