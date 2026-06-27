@@ -1,39 +1,29 @@
 ---
-member_id: "release-engineer"
-ticket: "GAP-CI-CD-001"
-priority: "high"
-est_hours: 3
-assigned_at: "2026-06-13"
-due_by: "2026-06-13"
-status: idle
-lock: false
+objective: "Fix critical production integration gaps in docker-compose and CI"
+ticket: "FIX-INTEGRATION-CRIT-001"
+state: running
+priority: "critical"
+estimated_hours: 3
+context_files:
+  - docker-compose.prod.yml
+  - .docker/socket/Dockerfile
+  - .docker/php/Dockerfile
+  - socket-server/src/config.js
+  - .github/workflows/deploy.yml
+  - .github/workflows/cd.yml
+  - .github/workflows/ci.yml
+quality_gates:
+  - "Add port mapping + env vars for socket-server in prod compose"
+  - "Fix socket-server Dockerfile build context path"
+  - "Add DB/Redis env vars to php-fpm and horizon in prod compose"
+  - "De-duplicate deploy workflows (remove cd.yml or consolidate)"
+  - "Add Redis service to socket CI job in ci.yml"
 ---
 
-# Plan — release-engineer: Set up CI/CD Pipeline
-
-## Objective
-Create GitHub Actions CI pipeline for backend tests + Android builds. Runs on every PR to main.
-
-## Context
-- No CI/CD pipeline exists
-- Backend: PHP 8.4 / Laravel 11 with Pest tests
-- Mobile: Expo SDK 51 / React Native 0.74, Gradle 8.6
-- Android builds need JDK 21 + Android SDK
-
 ## Acceptance Criteria
-- [ ] `backend/.github/workflows/ci.yml` (or root `.github/workflows/ci.yml`) created
-- [ ] Backend tests run on every push/PR to main
-- [ ] Android assembleDebug runs on every push/PR to main
-- [ ] Pipeline passes on current codebase
-
-## context_files
-- backend/.github/ (if exists)
-- .github/ (root level, if exists)
-- backend/phpunit.xml
-- backend/composer.json
-- mobile/package.json
-
-## quality_gates
-- [ ] Workflow file is valid YAML
-- [ ] Workflow references correct PHP/Node/Java versions
-- [ ] Workflow would pass on current code
+- [ ] Socket-server has port mapping in docker-compose.prod.yml
+- [ ] Socket-server has JWT_SECRET and APP_API_BASE_URL env vars in prod
+- [ ] Socket-server Dockerfile build context works
+- [ ] PHP-FPM and Horizon have DB_PASSWORD and REDIS_PASSWORD in prod
+- [ ] Only one deploy workflow runs on push to main
+- [ ] Socket CI tests have Redis service

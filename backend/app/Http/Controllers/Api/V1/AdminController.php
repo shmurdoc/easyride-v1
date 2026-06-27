@@ -14,17 +14,19 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
-    public function dashboard(): JsonResponse
+    public function dashboard(Request $request): JsonResponse
     {
-        $totalUsers = User::count();
-        $totalDrivers = User::role('driver')->count();
-        $totalRides = Ride::count();
-        $activeRides = Ride::whereIn('status', ['searching', 'accepted', 'arrived', 'in_progress'])->count();
-        $totalRevenue = Ride::where('status', 'completed')->sum('total_fare');
+        $tenantId = $request->user()->tenant_id;
 
-        $ridesToday = Ride::whereDate('created_at', today())->count();
-        $completedToday = Ride::whereDate('completed_at', today())->count();
-        $revenueToday = Ride::where('status', 'completed')->whereDate('completed_at', today())->sum('total_fare');
+        $totalUsers = User::where('tenant_id', $tenantId)->count();
+        $totalDrivers = User::where('tenant_id', $tenantId)->role('driver')->count();
+        $totalRides = Ride::where('tenant_id', $tenantId)->count();
+        $activeRides = Ride::where('tenant_id', $tenantId)->whereIn('status', ['searching', 'accepted', 'arrived', 'in_progress'])->count();
+        $totalRevenue = Ride::where('tenant_id', $tenantId)->where('status', 'completed')->sum('total_fare');
+
+        $ridesToday = Ride::where('tenant_id', $tenantId)->whereDate('created_at', today())->count();
+        $completedToday = Ride::where('tenant_id', $tenantId)->whereDate('completed_at', today())->count();
+        $revenueToday = Ride::where('tenant_id', $tenantId)->where('status', 'completed')->whereDate('completed_at', today())->sum('total_fare');
 
         return response()->json([
             'total_users' => $totalUsers,
@@ -40,10 +42,12 @@ class AdminController extends Controller
 
     public function users(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $users = User::query()
+            ->where('tenant_id', $tenantId)
             ->when($request->role, fn ($q, $v) => $q->where('role', $v))
             ->when($request->is_active, fn ($q, $v) => $q->where('is_active', filter_var($v, FILTER_VALIDATE_BOOLEAN)))
-            ->when($request->tenant_id, fn ($q, $v) => $q->where('tenant_id', $v))
             ->when($request->search, fn ($q, $v) => $q->where(function ($qq) use ($v) {
                 $qq->where('name', 'like', "%{$v}%")
                     ->orWhere('email', 'like', "%{$v}%")
@@ -58,10 +62,12 @@ class AdminController extends Controller
 
     public function rides(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $rides = Ride::query()
+            ->where('tenant_id', $tenantId)
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
             ->when($request->category, fn ($q, $v) => $q->where('category', $v))
-            ->when($request->tenant_id, fn ($q, $v) => $q->where('tenant_id', $v))
             ->when($request->from_date, fn ($q, $v) => $q->whereDate('created_at', '>=', $v))
             ->when($request->to_date, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
             ->with(['rider', 'driver', 'payment', 'rating'])
@@ -73,7 +79,9 @@ class AdminController extends Controller
 
     public function drivers(Request $request): JsonResponse
     {
-        $drivers = User::role('driver')
+        $tenantId = $request->user()->tenant_id;
+
+        $drivers = User::where('tenant_id', $tenantId)->role('driver')
             ->when($request->is_approved, fn ($q, $v) => $q->whereHas('driverProfile', fn ($qp) => $qp->where('is_approved', filter_var($v, FILTER_VALIDATE_BOOLEAN))))
             ->when($request->is_verified, fn ($q, $v) => $q->whereHas('driverProfile', fn ($qp) => $qp->where('is_verified', filter_var($v, FILTER_VALIDATE_BOOLEAN))))
             ->when($request->is_online, fn ($q, $v) => $q->where('is_online', filter_var($v, FILTER_VALIDATE_BOOLEAN)))
@@ -187,6 +195,7 @@ class AdminController extends Controller
     public function auditLogs(Request $request): JsonResponse
     {
         $logs = AdminAuditLog::query()
+            ->where('tenant_id', $request->user()->tenant_id)
             ->when($request->action, fn ($q, $v) => $q->where('action', $v))
             ->when($request->resource_type, fn ($q, $v) => $q->where('resource_type', $v))
             ->when($request->user_id, fn ($q, $v) => $q->where('user_id', $v))
@@ -202,6 +211,7 @@ class AdminController extends Controller
     public function payouts(Request $request): JsonResponse
     {
         $payouts = DriverPayout::query()
+            ->where('tenant_id', $request->user()->tenant_id)
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
             ->with('driver')
             ->latest()
@@ -210,16 +220,17 @@ class AdminController extends Controller
         return response()->json($payouts);
     }
 
-    public function payoutSummary(): JsonResponse
+    public function payoutSummary(Request $request): JsonResponse
     {
-        $pending = DriverPayout::where('status', 'pending')->sum('amount');
-        $paidWeek = DriverPayout::where('status', 'paid')
+        $tenantId = $request->user()->tenant_id;
+        $pending = DriverPayout::where('tenant_id', $tenantId)->where('status', 'pending')->sum('amount');
+        $paidWeek = DriverPayout::where('tenant_id', $tenantId)->where('status', 'paid')
             ->whereBetween('processed_at', [now()->startOfWeek(), now()->endOfWeek()])
             ->sum('amount');
-        $paidMonth = DriverPayout::where('status', 'paid')
+        $paidMonth = DriverPayout::where('tenant_id', $tenantId)->where('status', 'paid')
             ->whereMonth('processed_at', now()->month)
             ->sum('amount');
-        $average = DriverPayout::where('status', 'paid')
+        $average = DriverPayout::where('tenant_id', $tenantId)->where('status', 'paid')
             ->avg('amount') ?? 0;
 
         return response()->json([

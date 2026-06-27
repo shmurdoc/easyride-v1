@@ -8,7 +8,7 @@ import type MapViewType from 'react-native-maps';
 
 export default function ActiveRideScreen({ route, navigation }: { route: DriverRoute<'ActiveRide'>; navigation: DriverNav }) {
   const { rideId, riderId } = route.params;
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const { isConnected, emit, on } = useSocket({ token: token || '' });
   const [ride, setRide] = useState<Ride | null>(null);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);

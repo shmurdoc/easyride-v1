@@ -9,7 +9,7 @@ NGINX_CONF="nginx/blue-green.conf"
 echo "Starting blue/green deploy to $ENVIRONMENT"
 
 # Determine active color
-if docker ps --format '{{.Names}}' | grep -q 'blue'; then
+if docker ps --format '{{.Names}}' | grep -q 'easyryde-nginx-blue'; then
   INACTIVE="green"
   ACTIVE="blue"
 else
@@ -20,23 +20,38 @@ fi
 echo "Active: $ACTIVE, Deploying: $INACTIVE"
 
 # Build and start inactive
-if [ "$INACTIVE" = "green" ]; then
-  docker compose -f $GREEN_COMPOSE build
-  docker compose -f $GREEN_COMPOSE up -d
-else
-  docker compose -f $BLUE_COMPOSE build
-  docker compose -f $BLUE_COMPOSE up -d
-fi
+COMPOSE_FILE="${INACTIVE}_COMPOSE"
+COMPOSE_PATH="${!COMPOSE_FILE}"
+echo "Using compose file: $COMPOSE_PATH"
+
+docker compose -f "$COMPOSE_PATH" build
+docker compose -f "$COMPOSE_PATH" up -d
 
 # Wait for health check
 echo "Waiting for $INACTIVE to become healthy..."
+HEALTH_CHECK_PORT=""
+if [ "$INACTIVE" = "blue" ]; then
+  HEALTH_CHECK_PORT="8081"
+else
+  HEALTH_CHECK_PORT="8082"
+fi
+
+HEALTHY=false
 for i in $(seq 1 30); do
-  if curl -sf http://${INACTIVE}:8000/api/health > /dev/null 2>&1; then
+  if curl -sf "http://localhost:${HEALTH_CHECK_PORT}/api/health" > /dev/null 2>&1; then
     echo "$INACTIVE is healthy"
+    HEALTHY=true
     break
   fi
+  echo "Attempt $i/30: health check not ready yet"
   sleep 2
 done
+
+if [ "$HEALTHY" = false ]; then
+  echo "Health check FAILED for $INACTIVE. Initiating rollback..."
+  docker compose -f "$COMPOSE_PATH" down
+  exit 1
+fi
 
 # Run migrations (run once, not per color)
 php artisan migrate --force
@@ -52,5 +67,7 @@ echo "Traffic switched to $INACTIVE"
 sleep 60
 
 # Stop old version
-docker compose -f "${ACTIVE}_compose.yml" down
+OLD_COMPOSE_VAR="${ACTIVE}_COMPOSE"
+OLD_COMPOSE_PATH="${!OLD_COMPOSE_VAR}"
+docker compose -f "$OLD_COMPOSE_PATH" down
 echo "Deploy complete. $INACTIVE is now active."

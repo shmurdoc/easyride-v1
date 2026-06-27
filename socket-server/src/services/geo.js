@@ -64,7 +64,8 @@ module.exports = {
   },
 
   async cleanupStaleLocations() {
-    const keys = await dataClient.keys(`${DRIVER_LOC_PREFIX}*`);
+    const { scanKeys } = require('../utils/scanKeys');
+    const keys = await scanKeys(dataClient, `${DRIVER_LOC_PREFIX}*`);
     const now = Date.now();
     let cleaned = 0;
 

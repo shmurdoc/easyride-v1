@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -12,19 +13,22 @@ class UserTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected Tenant $tenant;
+
     protected function setUp(): void
     {
         parent::setUp();
         Role::create(['name' => 'rider', 'guard_name' => 'web']);
         Role::create(['name' => 'driver', 'guard_name' => 'web']);
         Role::create(['name' => 'admin', 'guard_name' => 'web']);
+        $this->tenant = Tenant::create(['name' => 'Test Tenant', 'slug' => 'test-tenant', 'domain' => 'test.local']);
     }
 
     public function test_rider_can_view_users_list(): void
     {
-        $rider = User::factory()->create();
+        $rider = User::factory()->create(['tenant_id' => $this->tenant->id]);
         $rider->assignRole('rider');
-        User::factory()->count(3)->create();
+        User::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
         Sanctum::actingAs($rider);
 
         $response = $this->getJson('/api/v1/users');

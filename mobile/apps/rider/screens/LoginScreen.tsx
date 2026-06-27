@@ -26,7 +26,11 @@ export default function LoginScreen({ navigation }: { navigation: RiderAuthNav }
         <Typography variant="body" color={COLORS.textMuted} style={{ textAlign: 'center', marginBottom: 40 }}>{t('app.tagline')}</Typography>
 
         <Input label={t('auth.email')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={{ marginBottom: SPACING.base }} />
-        <Input label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry style={{ marginBottom: SPACING.base }} />
+        <Input label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry style={{ marginBottom: SPACING.sm }} />
+
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ alignSelf: 'flex-end', marginBottom: SPACING.base }}>
+          <Typography variant="bodySmall" color={COLORS.primary}>Forgot Password?</Typography>
+        </TouchableOpacity>
 
         <Button title={loading ? t('auth.signingIn') : t('auth.signIn')} onPress={handleLogin} disabled={loading} size="lg" style={{ marginBottom: SPACING.base }} />
 

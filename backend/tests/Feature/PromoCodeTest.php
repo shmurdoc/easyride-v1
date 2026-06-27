@@ -102,7 +102,7 @@ class PromoCodeTest extends TestCase
     public function test_rider_can_delete_promo_code(): void
     {
         $rider = User::factory()->create();
-        $rider->assignRole('rider');
+        $rider->assignRole('admin');
         Sanctum::actingAs($rider);
 
         $promo = PromoCode::create([

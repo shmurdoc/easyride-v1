@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Driver\ToggleOnlineRequest;
 use App\Http\Requests\Api\V1\Driver\VehicleRegisterRequest;
+use App\Http\Requests\Api\V1\Ride\UpdateLocationRequest;
 use App\Http\Requests\Api\V1\UpdateDriverProfileRequest;
 use App\Models\Ride;
 use App\Models\User;
@@ -17,6 +18,7 @@ class DriverController extends Controller
     public function index(Request $request): JsonResponse
     {
         $drivers = User::role('driver')
+            ->where('tenant_id', $request->user()->tenant_id)
             ->when($request->is_online, fn ($q, $v) => $q->where('is_online', filter_var($v, FILTER_VALIDATE_BOOLEAN)))
             ->when($request->is_approved, fn ($q, $v) => $q->whereHas('driverProfile', fn ($qp) => $qp->where('is_approved', filter_var($v, FILTER_VALIDATE_BOOLEAN))))
             ->when($request->search, fn ($q, $v) => $q->where(function ($qq) use ($v) {
@@ -30,8 +32,12 @@ class DriverController extends Controller
         return response()->json($drivers);
     }
 
-    public function show(User $driver): JsonResponse
+    public function show(Request $request, User $driver): JsonResponse
     {
+        if ($driver->tenant_id !== $request->user()->tenant_id && ! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $driver->load(['driverProfile', 'vehicle', 'tenant']);
 
         $averageRating = $driver->driverProfile?->average_rating ?? 0;
@@ -93,6 +99,19 @@ class DriverController extends Controller
         return response()->json([
             'is_online' => $user->fresh()->is_online,
         ]);
+    }
+
+    public function updateLocation(UpdateLocationRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $user = $request->user();
+        $user->update([
+            'current_latitude' => $validated['latitude'],
+            'current_longitude' => $validated['longitude'],
+            'last_location_update' => now(),
+        ]);
+
+        return response()->json(['message' => 'Location updated.']);
     }
 
     public function earnings(Request $request): JsonResponse

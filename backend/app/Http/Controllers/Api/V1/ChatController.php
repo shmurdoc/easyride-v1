@@ -25,7 +25,7 @@ class ChatController extends Controller
 
         $messages = $this->chatService->getMessages(
             $ride,
-            (int) $request->per_page ?? 50,
+            (int) ($request->per_page ?? 50),
             $request->before,
         );
 

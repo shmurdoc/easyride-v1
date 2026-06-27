@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\PromoCode;
 use App\Models\Ride;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Role;
@@ -190,6 +191,13 @@ class RideTest extends TestCase
             'dropoff_longitude' => 29.4800,
             'dropoff_address' => '456 Oak Ave',
             'total_fare' => 150.00,
+        ]);
+
+        // Create wallet with sufficient balance for payment processing
+        Wallet::create([
+            'user_id' => $rider->id,
+            'balance' => 500.00,
+            'currency' => 'ZAR',
         ]);
 
         Sanctum::actingAs($driver);

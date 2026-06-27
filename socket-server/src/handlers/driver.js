@@ -61,7 +61,8 @@ module.exports = function registerDriverHandlers(socket, io) {
       }
 
       const { dataClient } = require('../services/redis');
-      const rideKeys = await dataClient.keys('ride:pending:*');
+      const { scanKeys } = require('../utils/scanKeys');
+      const rideKeys = await scanKeys(dataClient, 'ride:pending:*');
       const rides = [];
 
       for (const key of rideKeys.slice(0, 20)) {

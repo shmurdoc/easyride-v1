@@ -1,7 +1,7 @@
 ---
 project: "EasyRyde"
-purpose: "Gap tracking — EasyRyde"
-last_updated: "2026-06-13"
+purpose: "Gap tracking — EasyRyde production readiness"
+last_updated: "2026-06-18"
 updated_by: "Leader"
 ---
 
@@ -9,36 +9,32 @@ updated_by: "Leader"
 
 ## Open Gaps
 
-_(none — all gaps closed)_
+### Critical (7)
+| ID | Severity | Description | Owner | Status |
+|----|----------|-------------|-------|--------|
+| GAP-MAPS-KEY-001 | CRITICAL | Google Maps API key hardcoded in mobile/apps/*/app.json — move to env vars via app.config.js | builder-1 | closed |
+| GAP-ANDROID-SIGNING-001 | CRITICAL | Android release builds use debug keystore — no production signing | builder-1 | closed |
+| GAP-EAS-CONFIG-001 | CRITICAL | No eas.json for any of 3 mobile apps — no EAS Build/Update | builder-1 | closed |
+| GAP-BG-COMPOSE-001 | CRITICAL | docker-compose.prod.blue.yml and docker-compose.prod.green.yml referenced in deploy script but don't exist | release-engineer | closed |
+| GAP-POSTGIS-PROD-001 | CRITICAL | docker-compose.prod.yml uses plain postgres:16-alpine without PostGIS — spatial queries will fail | release-engineer | closed |
+| GAP-WEB-DOCKERFILE-001 | CRITICAL | web/Dockerfile runs npm run dev instead of npm run build — no production static serving | release-engineer | closed |
+| GAP-NGINX-PATH-001 | CRITICAL | docker-compose.prod.yml references wrong nginx config path (.docker/nginx/nginx.conf vs nginx/api.conf) | release-engineer | closed |
+
+### High (12)
+| ID | Severity | Description | Owner | Status |
+|----|----------|-------------|-------|--------|
+| GAP-SQL-INJECTION-001 | HIGH | Unsanitized orderBy column in FoodDeliveryController line 39 — whitelist allowed columns | builder-3 | closed |
+| GAP-INDEXES-001 | HIGH | 6 missing critical indexes on rides (status,created_at), users (role,is_online,is_approved), payments (gateway,gateway_reference), phone_number | builder-3 | closed |
+| GAP-WEBHOOK-EVENTS-001 | HIGH | Missing webhook_events table for payment gateway dead letter queue | builder-3 | closed |
+| GAP-ESCROW-CRON-001 | HIGH | Escrow auto-release cron job not scheduled | builder-3 | closed |
+| GAP-SSL-CERTS-001 | HIGH | No SSL certificate mounting in docker-compose.prod.yml — no HTTPS | release-engineer | closed |
+| GAP-ADMIN-2FA-001 | HIGH | No Admin 2FA (TOTP) — admin accounts have no second factor | builder-3 | closed |
+| GAP-SSO-001 | HIGH | Missing Google/Apple SSO (no Laravel Socialite) | builder-3 | closed |
+| GAP-IOS-ENTITLEMENTS-001 | HIGH | No iOS entitlements for location, push notifications in mobile apps | builder-1 | closed |
+| GAP-PHPUNIT-DB-001 | HIGH | phpunit.xml uses SQLite in-memory — misses PostgreSQL-specific issues | qa-lead-integration | closed |
+| GAP-MOBILE-DEPS-001 | HIGH | chai and mocha in socket-server dependencies instead of devDependencies | builder-2 | closed |
+| GAP-COMPOSER-UNPINNED-001 | HIGH | Sentry and Stripe PHP versions unpinned (*) in composer.json | builder-3 | closed |
+| GAP-WEB-BUILD-PROD-001 | HIGH | No production build for web admin panel — dist/ only contains favicon.svg | builder-2 | closed |
 
 ## Closed Gaps
-
-| ID | Severity | Resolution |
-|----|----------|------------|
-| GAP-BUILD-MOBILE-001 | medium | Already compatible — expo-task-manager@12.0.6 works with installed expo-modules-core |
-| GAP-BUILD-MOBILE-002 | medium | Already fixed — NDK 27.1.12297006 in use with full toolchain |
-| GAP-TYPECHECK-001 | low | Already fixed — @types/react-native added as devDependency; `tsc --noEmit` exits 0 |
-| GAP-BACKEND-TEST-COVERAGE-001 | medium | 39 tests written across 6 controller files, all passing |
-| GAP-CI-CD-001 | high | `.github/workflows/ci.yml` created with backend-tests + android-build jobs |
-| GAP-SECRETS-001 | critical | .env never tracked in git; APP_KEY rotated; .gitignore confirmed |
-| QA-FRONTEND-001 | critical | **FIXED** — ApiClient now unwraps { success, data: { ... } } envelope in client.ts |
-| QA-FRONTEND-002 | high | **FIXED** — .env files created for all 3 apps pointing to localhost:9000 |
-| QA-FRONTEND-003 | high | **FIXED** — Receipt download URL no longer has double /v1/ prefix |
-| QA-FRONTEND-004 | high | **FIXED** — Payment method IDs use hardcoded map instead of slug generation |
-| QA-FRONTEND-005 | high | **FIXED** — ApiClient fallback URL changed from 8080 to 9000 |
-| QA-FRONTEND-006 | medium | **FIXED** — ListEmptyComponent added to all 4 FlatLists |
-| QA-FRONTEND-007 | medium | **FIXED** — RefreshControl added to all 4 list screens |
-| QA-FRONTEND-008 | medium | **FIXED** — Separate depositAmount and withdrawAmount state variables |
-| QA-FRONTEND-010 | low | **FIXED** — Email regex validation added to all 3 login forms |
-| QA-FRONTEND-011 | low | **FIXED** — All console.warn gated behind __DEV__ flag |
-| QA-FRONTEND-014 | low | **FIXED** — SettingsScreen inputs now editable with save functionality |
-| QA-FRONTEND-015 | low | **FIXED** — Object.entries guarded with type check |
-| QA-FRONTEND-009 | medium | **FIXED** — EXPO_PUBLIC_SOCKET_URL added to admin .env and .env.example |
-| QA-FRONTEND-013 | low | **FIXED** — Navigation types created in shared/src/types/navigation.ts with typed params |
-| QA-FRONTEND-016 | low | **FIXED** — graphql + wonka removed from rider package.json |
-| QA-FRONTEND-012 | low | **FIXED** — i18n system created: en.ts (419 keys), useTranslation hook, applied to login/register screens + shared components (SplashScreen, ErrorState, ErrorBoundary) |
-| QA-INTEGRATION-005 | low | **FIXED** — pytest.ini, requirements.txt, test_api_routes.py created; 2 tests passing |
-| QA-INTEGRATION-001 | high | **FIXED** — ci.yml android-build uses matrix strategy with correct gradlew path |
-| QA-INTEGRATION-002 | critical | **FIXED** — HealthCheckController now uses Redis::llen() instead of Redis::connection()->queue() |
-| QA-INTEGRATION-003 | medium | **FIXED** — ci.yml now builds all 3 APKs (driver, rider, admin) via matrix strategy |
-| QA-INTEGRATION-004 | low | **FIXED** — deploy.yml no longer uses deprecated --no-suggest flag |
+_(all previous gaps closed — see team.legacy for history)_

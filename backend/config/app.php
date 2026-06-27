@@ -84,6 +84,8 @@ return [
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
+    'default_tenant_id' => env('DEFAULT_TENANT_ID', 'default'),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key

@@ -1,28 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { drivers, COLORS, GRADIENTS, SPACING, RADIUS, LoadingOverlay, GlassCard, AnimatedNumber, GradientText } from '@easyryde/shared';
+import { drivers, COLORS, GRADIENTS, SPACING, RADIUS, LoadingOverlay, GlassCard, AnimatedNumber, GradientText, GlowButton } from '@easyryde/shared';
 import type { WalletTransaction } from '@easyryde/shared';
 
 export default function EarningsScreen() {
   const [earnings, setEarnings] = useState({ total: 0, today: 0, pending: 0, trips: 0 });
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadEarnings(); }, []);
 
   async function loadEarnings() {
     try {
+      setError(null);
       const data = await drivers.earnings();
       setEarnings({ total: data.total_earnings, today: data.today_earnings, pending: data.pending_payout, trips: data.total_trips });
       setTransactions(data.recent_transactions);
-    } catch (err) { console.warn('Failed to load earnings:', err); } finally { setLoading(false); setRefreshing(false); }
+    } catch (err) { setError('Failed to load earnings'); console.warn('Failed to load earnings:', err); } finally { setLoading(false); setRefreshing(false); }
   }
 
   const onRefresh = React.useCallback(() => { setRefreshing(true); loadEarnings(); }, []);
 
   if (loading) return <LoadingOverlay />;
+
+  if (error) return (
+    <LinearGradient colors={[COLORS.bgGradientStart, COLORS.bgGradientEnd]} style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.base }}>
+      <GradientText colors={GRADIENTS.primary} style={{ fontSize: 16, textAlign: 'center', marginBottom: SPACING.md }}>{error}</GradientText>
+      <GlowButton title="Retry" onPress={() => { setLoading(true); loadEarnings(); }} size="md" />
+    </LinearGradient>
+  );
 
   return (
     <LinearGradient colors={[COLORS.bgGradientStart, COLORS.bgGradientEnd]} style={{ flex: 1 }}>

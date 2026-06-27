@@ -42,3 +42,23 @@ coverage/
 .nyc_output/
 .phpunit.result.cache
 .jest-cache/
+
+# Root-level scratch/debug files
+check_*.php
+fix_*.php
+create_*.php
+test_*.php
+*.json.tmp
+tmp_*.json
+login.json
+*.png
+*.xml
+docs/
+setup/
+docker-compose.prod.blue.yml
+docker-compose.prod.green.yml
+
+# Backend build artifacts
+backend/.env.testing
+backend/phpstan.phar
+backend/storage/phpstan/

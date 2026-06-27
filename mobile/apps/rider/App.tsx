@@ -1,95 +1,171 @@
-import React, { useState, useRef } from 'react';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import React from 'react';
+import { StatusBar, ActivityIndicator, View, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth, useNotifications, SplashScreen, ErrorBoundary } from '@easyryde/shared';
-import { COLORS } from '@easyryde/shared';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider, theme, ErrorBoundary } from '@easyryde/shared';
+import { useAuth } from '@easyryde/shared';
+import type { RiderAuthStackParamList, RiderStackParamList, RiderMainTabParamList } from '@easyryde/shared';
 
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
+import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import HomeScreen from './screens/HomeScreen';
 import BookRideScreen from './screens/BookRideScreen';
 import RideTrackingScreen from './screens/RideTrackingScreen';
-import RideHistoryScreen from './screens/RideHistoryScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import ChatScreen from './screens/ChatScreen';
 import PaymentScreen from './screens/PaymentScreen';
-import RestaurantListScreen from './screens/RestaurantListScreen';
-import RestaurantMenuScreen from './screens/RestaurantMenuScreen';
-import FoodCheckoutScreen from './screens/FoodCheckoutScreen';
-import FoodOrderTrackingScreen from './screens/FoodOrderTrackingScreen';
+import RideHistoryScreen from './screens/RideHistoryScreen';
+import RideDetailScreen from './screens/RideDetailScreen';
+import ChatScreen from './screens/ChatScreen';
 import WalletScreen from './screens/WalletScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const AuthStack = createNativeStackNavigator<RiderAuthStackParamList>();
+const MainStack = createNativeStackNavigator<RiderStackParamList>();
+const Tab = createBottomTabNavigator<RiderMainTabParamList>();
 
-function HomeTabs() {
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.bg },
+      }}
+    >
+      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="Register" component={RegisterScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home';
-          if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Activity') iconName = focused ? 'list' : 'list-outline';
-          else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
+      screenOptions={{
         headerShown: false,
-      })}
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textMuted,
+      }}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Activity" component={RideHistoryScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.tabIcon, { borderBottomColor: color }]} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Activity"
+        component={RideHistoryScreen}
+        options={{
+          tabBarLabel: 'Activity',
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.tabIcon, { borderBottomColor: color }]} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <View style={[styles.tabIcon, { borderBottomColor: color }]} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }
 
-export default function AppLayout() {
+function MainNavigator() {
+  return (
+    <MainStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.bg },
+      }}
+    >
+      <MainStack.Screen name="Main" component={MainTabs} />
+      <MainStack.Screen name="BookRide" component={BookRideScreen} />
+      <MainStack.Screen name="RideTracking" component={RideTrackingScreen} />
+      <MainStack.Screen name="Payment" component={PaymentScreen} />
+      <MainStack.Screen name="RideHistory" component={RideHistoryScreen} />
+      <MainStack.Screen name="RideDetail" component={RideDetailScreen} />
+      <MainStack.Screen name="Chat" component={ChatScreen} />
+      <MainStack.Screen name="Wallet" component={WalletScreen} />
+    </MainStack.Navigator>
+  );
+}
+
+function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
-  const navigationRef = useRef<NavigationContainerRef<any>>(null);
-  const [isSplash, setIsSplash] = useState(true);
 
-  useNotifications(navigationRef);
-
-  if (isLoading) return null;
-
-  if (isSplash) {
-    return <SplashScreen onFinish={() => setIsSplash(false)} duration={2000} />;
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
   }
 
   return (
-    <ErrorBoundary>
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          animation: 'slide_from_right',
-        }}
-      >
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Main" component={HomeTabs} />
-            <Stack.Screen name="BookRide" component={BookRideScreen} />
-            <Stack.Screen name="RideTracking" component={RideTrackingScreen} />
-            <Stack.Screen name="Chat" component={ChatScreen} />
-            <Stack.Screen name="Payment" component={PaymentScreen} />
-            <Stack.Screen name="RestaurantList" component={RestaurantListScreen} />
-            <Stack.Screen name="RestaurantMenu" component={RestaurantMenuScreen} />
-            <Stack.Screen name="FoodCheckout" component={FoodCheckoutScreen} />
-            <Stack.Screen name="FoodOrderTracking" component={FoodOrderTrackingScreen} />
-            <Stack.Screen name="Wallet" component={WalletScreen} options={{ animation: 'slide_from_bottom' }} />
-          </>
-        )}
-      </Stack.Navigator>
+    <NavigationContainer
+      theme={{
+        dark: true,
+        colors: {
+          primary: theme.colors.primary,
+          background: theme.colors.bg,
+          card: theme.colors.surface,
+          text: theme.colors.text,
+          border: theme.colors.border,
+          notification: theme.colors.primary,
+        },
+      }}
+    >
+      {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <StatusBar barStyle="light-content" backgroundColor={theme.colors.bg} />
+          <AppContent />
+        </ThemeProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.bg,
+  },
+  tabIcon: {
+    width: 20,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 2,
+  },
+});

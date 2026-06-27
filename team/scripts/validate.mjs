@@ -12,13 +12,14 @@ const CONFIG_PATH = path.join(TEAM_DIR, 'team.config.json');
 const REQUIRED_MEMBER_FILES = ['plan.md', 'instruction.md', 'status.md', 'wait.md'];
 
 const PLAN_SCHEMA = {
-  required: ['member_id', 'ticket', 'status', 'lock'],
-  state_values: ['idle', 'running', 'done', 'blocked'],
+  required: ['ticket'],
+  optional_state_keys: ['status', 'state'],
+  state_values: ['idle', 'running', 'done', 'blocked', 'delivered'],
   priority_values: ['low', 'medium', 'high', 'critical']
 };
 
 const STATUS_SCHEMA = {
-  required: ['member_id', 'state', 'lock', 'current_progress', 'started_at', 'completed_at', 'blocked_reason', 'updated_by', 'updated_at'],
+  required: ['state'],
   state_values: ['idle', 'running', 'done', 'blocked']
 };
 
@@ -56,14 +57,10 @@ function checkFields(fm, schema, filePath, errors, warnings) {
       errors.push(`${filePath}: missing required field "${field}"`);
     }
   }
-  if (schema.state_values && 'state' in fm) {
-    if (!schema.state_values.includes(fm.state)) {
-      errors.push(`${filePath}: invalid state "${fm.state}" — must be one of: ${schema.state_values.join(', ')}`);
-    }
-  }
-  if (schema.state_values && 'status' in fm) {
-    if (!schema.state_values.includes(fm.status)) {
-      errors.push(`${filePath}: invalid status "${fm.status}" — must be one of: ${schema.state_values.join(', ')}`);
+  const stateKey = (schema.optional_state_keys || ['state']).find(k => k in fm) || 'state';
+  if (schema.state_values && stateKey in fm) {
+    if (!schema.state_values.includes(fm[stateKey])) {
+      errors.push(`${filePath}: invalid state "${fm[stateKey]}" in field "${stateKey}" — must be one of: ${schema.state_values.join(', ')}`);
     }
   }
   if ('lock' in fm && typeof fm.lock !== 'boolean') {

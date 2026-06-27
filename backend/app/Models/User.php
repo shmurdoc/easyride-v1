@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasTotp;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, HasRoles, HasUuids, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, HasTotp, HasUuids, Notifiable, SoftDeletes;
 
     protected $keyType = 'string';
 
@@ -30,14 +31,14 @@ class User extends Authenticatable
     ];
 
     protected $hidden = [
-        'password', 'remember_token',
+        'password', 'remember_token', 'totp_secret',
     ];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'phone_number' => 'encrypted',
+            'phone_number' => 'string',
             'kyc_verified_at' => 'datetime',
             'anonymized_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -46,6 +47,7 @@ class User extends Authenticatable
             'is_online' => 'boolean',
             'is_approved' => 'boolean',
             'is_kyc_verified' => 'boolean',
+            'totp_enabled' => 'boolean',
             'current_latitude' => 'decimal:7',
             'current_longitude' => 'decimal:7',
             'last_location_update' => 'datetime',

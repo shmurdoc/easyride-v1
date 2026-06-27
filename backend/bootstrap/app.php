@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\AdminTotpMiddleware;
 use App\Http\Middleware\ApiRateLimiterMiddleware;
 use App\Http\Middleware\DriverMiddleware;
 use App\Http\Middleware\InputSanitizationMiddleware;
@@ -61,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'tenant' => TenantMiddleware::class,
             'admin' => AdminMiddleware::class,
+            'admin.totp' => AdminTotpMiddleware::class,
             'driver' => DriverMiddleware::class,
             'security.headers' => SecurityHeadersMiddleware::class,
             'rate.limit' => ApiRateLimiterMiddleware::class,

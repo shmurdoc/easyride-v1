@@ -59,13 +59,30 @@ class DeliveryController extends Controller
         return response()->json(['delivery' => $delivery], 201);
     }
 
-    public function show(Delivery $delivery): JsonResponse
+    public function show(Request $request, Delivery $delivery): JsonResponse
     {
+        $user = $request->user();
+
+        if ($delivery->sender_id !== $user->id
+            && $delivery->driver_id !== $user->id
+            && ! $user->hasAnyRole(['admin', 'super-admin'])
+        ) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         return response()->json(['delivery' => $delivery->load(['sender', 'driver', 'ride'])]);
     }
 
     public function updateStatus(UpdateStatusRequest $request, Delivery $delivery): JsonResponse
     {
+        $user = $request->user();
+
+        if ($delivery->driver_id !== $user->id
+            && ! $user->hasAnyRole(['admin', 'super-admin'])
+        ) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validated();
 
         $delivery = $this->deliveryService->updateStatus($delivery, $validated['status']);

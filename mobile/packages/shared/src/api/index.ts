@@ -14,7 +14,7 @@ export const auth = {
 
   logout: () => api.post('/auth/logout'),
 
-  me: () => api.get<User>('/auth/me'),
+  me: () => api.get<{ user: User }>('/auth/me').then(r => r.user),
 
   forgotPassword: (email: string) =>
     api.post('/auth/forgot-password', { email }),
@@ -38,18 +38,18 @@ export const rides = {
 
   create: (data: {
     category: string;
-    pickup_latitude: number;
-    pickup_longitude: number;
+    pickup_lat: number;
+    pickup_lng: number;
     pickup_address: string;
-    dropoff_latitude: number;
-    dropoff_longitude: number;
+    dropoff_lat: number;
+    dropoff_lng: number;
     dropoff_address: string;
     payment_method: string;
     promo_code?: string;
-  }) => api.post<Ride>('/rides', data),
+  }) => api.post<{ ride: Ride }>('/rides', data).then(r => r.ride),
 
   cancel: (id: string, reason?: string) =>
-    api.post<Ride>(`/rides/${id}/cancel`, { reason }),
+    api.post<Ride>(`/rides/${id}/cancel`, { cancellation_reason: reason }),
 
   rate: (id: string, score: number, comment?: string) =>
     api.post<Rating>(`/rides/${id}/rate`, { score, comment }),
@@ -80,7 +80,7 @@ export const drivers = {
   updateVehicle: (data: {
     make: string; model: string; year: number;
     color: string; license_plate: string; category: string;
-  }) => api.put('/drivers/vehicle', data),
+  }) => api.post('/drivers/vehicle', data),
 
   toggleOnline: () => api.post<{ is_online: boolean }>('/drivers/toggle-online'),
 
@@ -99,7 +99,7 @@ export const drivers = {
     api.get<Ride[]>('/drivers/nearby-rides', radius ? { radius: String(radius) } : undefined),
 
   updateLocation: (lat: number, lng: number) =>
-    api.post('/driver/location', { latitude: lat, longitude: lng }),
+    api.post('/drivers/location', { latitude: lat, longitude: lng }),
 };
 
 export const notifications = {
@@ -116,7 +116,13 @@ export const payments = {
   methods: () => api.get<{ methods: { id: string; name: string; available: boolean }[] }>('/payments/methods'),
 
   processRide: (rideId: string, method: string) =>
-    api.post<Payment>(`/payments/rides/${rideId}/pay`, { method }),
+    api.post<{
+      payment: Payment;
+      message: string;
+      redirect_url?: string;
+      client_secret?: string;
+      payment_intent_id?: string;
+    }>(`/payments/rides/${rideId}/pay`, { method }),
 };
 
 export const wallet = {
@@ -198,12 +204,12 @@ export const admin = {
 
 export const reports = {
   dashboard: (days?: number) =>
-    api.get('/reports/dashboard', days ? { days: String(days) } : undefined),
+    api.get('/admin/reports/dashboard', days ? { days: String(days) } : undefined),
 
   revenue: (params?: Record<string, string>) =>
-    api.get('/reports/revenue', params),
+    api.get('/admin/reports/revenue', params),
 
-  drivers: () => api.get('/reports/drivers'),
+  drivers: () => api.get('/admin/reports/drivers'),
 };
 
 export { foodDelivery } from './foodDelivery';

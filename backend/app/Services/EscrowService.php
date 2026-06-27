@@ -23,19 +23,27 @@ class EscrowService
 
     public function holdPayment(Ride $ride, string $method = 'wallet', array $gatewayData = []): Payment
     {
+        $existingPayment = Payment::where('ride_id', $ride->id)
+            ->whereIn('status', [Payment::STATUS_PENDING, Payment::STATUS_COMPLETED, Payment::STATUS_HELD])
+            ->first();
+
+        if ($existingPayment) {
+            Log::warning('EscrowService: Double-debit prevented', [
+                'ride_id' => $ride->id,
+                'existing_payment_id' => $existingPayment->id,
+                'existing_status' => $existingPayment->status,
+                'requested_method' => $method,
+            ]);
+
+            throw new \App\Exceptions\PaymentAlreadyHeldException(
+                "Payment already exists for ride {$ride->id} with status {$existingPayment->status}"
+            );
+        }
+
         return DB::transaction(function () use ($ride, $method, $gatewayData) {
             $payment = $this->paymentService->processPayment($ride, $method, $gatewayData);
 
             if ($method === 'wallet') {
-                $wallet = $this->walletService->getOrCreateWallet($ride->rider);
-                $this->walletService->debit(
-                    $wallet,
-                    (float) $ride->total_fare,
-                    'escrow_hold',
-                    $ride->id,
-                    "Payment held in escrow for ride {$ride->id}",
-                );
-
                 $driverWallet = $this->walletService->getOrCreateWallet($ride->driver);
 
                 $driverWallet->increment('pending_balance', (float) $payment->driver_payout);

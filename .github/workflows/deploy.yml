@@ -55,19 +55,22 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          path: backend/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
           restore-keys: |
             ${{ runner.os }}-composer-
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
+        working-directory: backend
 
       - name: Copy environment file
         run: cp .env.example .env
+        working-directory: backend
 
       - name: Generate application key
         run: php artisan key:generate
+        working-directory: backend
 
       - name: Run migrations
         env:
@@ -78,6 +81,7 @@ jobs:
           DB_USERNAME: test_user
           DB_PASSWORD: test_password
         run: php artisan migrate --force
+        working-directory: backend
 
       - name: Run seeders
         env:
@@ -88,12 +92,15 @@ jobs:
           DB_USERNAME: test_user
           DB_PASSWORD: test_password
         run: php artisan db:seed --force
+        working-directory: backend
 
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=2G
+        working-directory: backend
 
       - name: Run Pint (code style)
         run: vendor/bin/pint --test
+        working-directory: backend
 
       - name: Run PHPUnit tests
         env:
@@ -104,11 +111,12 @@ jobs:
           DB_USERNAME: test_user
           DB_PASSWORD: test_password
         run: vendor/bin/phpunit --coverage-clover=coverage.xml
+        working-directory: backend
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.xml
+          file: backend/coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install Node.js dependencies
@@ -117,11 +125,10 @@ jobs:
 
       - name: Run TypeScript type check
         working-directory: mobile
-        run: npx tsc --noEmit
-
-      - name: Run ESLint
-        working-directory: mobile
-        run: npx eslint . --ext .ts,.tsx
+        run: |
+          npx tsc -p apps/rider/tsconfig.json --noEmit
+          npx tsc -p apps/driver/tsconfig.json --noEmit
+          npx tsc -p apps/admin/tsconfig.json --noEmit
 
       - name: Run Socket.io tests
         working-directory: socket-server

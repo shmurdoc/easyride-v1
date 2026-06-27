@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { foodDelivery, COLORS, GRADIENTS, SPACING, RADIUS, Badge, SegmentedControl, GlassCard, GlowButton, GradientText } from '@easyryde/shared';
 import type { FoodOrder, DriverNav } from '@easyryde/shared';

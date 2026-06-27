@@ -91,8 +91,9 @@ function enforce() {
       violations.push({ memberId, type: 'LOCK_STATE_MISMATCH', detail: `state=running but lock=${statusFm.lock}` });
     }
 
-    if (statusFm.state === 'running' && planFm.status !== 'running') {
-      violations.push({ memberId, type: 'PLAN_STATUS_MISMATCH', detail: `status.md state=running but plan.md status=${planFm.status}` });
+    const planState = planFm.status ?? planFm.state;
+    if (statusFm.state === 'running' && planState !== 'running') {
+      violations.push({ memberId, type: 'PLAN_STATUS_MISMATCH', detail: `status.md state=running but plan.md state=${planState}` });
     }
 
     if (statusFm.state === 'done' && statusFm.lock === true) {

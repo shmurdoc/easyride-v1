@@ -1,56 +1,33 @@
 ---
-member_id: "builder-2"
-ticket: "FIX-SHARED-CRIT-001"
+objective: "Fix critical API contract mismatches between frontend and backend"
+ticket: "FIX-API-CONTRACT-CRIT-001"
+state: running
 priority: "critical"
-est_hours: 2
-assigned_at: "2026-06-15"
-due_by: "2026-06-15"
-status: done
-lock: false
-review_required: true
+estimated_hours: 3
+context_files:
+  - mobile/packages/shared/src/api/index.ts
+  - mobile/packages/shared/src/api/client.ts
+  - backend/routes/api.php
+  - backend/app/Http/Controllers/Api/V1/AuthController.php
+  - backend/app/Http/Controllers/Api/V1/RideController.php
+  - backend/app/Http/Controllers/Api/V1/DriverController.php
+  - backend/app/Http/Controllers/Api/V1/AdminController.php
+  - backend/app/Http/Controllers/Api/V1/PaymentController.php
+quality_gates:
+  - "Fix reports URL prefix: change frontend calls from /reports/* to /admin/reports/*"
+  - "Fix auth/me response: update frontend to handle {user: User} envelope or change backend"
+  - "Fix ride create response: handle {ride: Ride} envelope or change backend"
+  - "Add PUT /drivers/vehicle backend route or change frontend to POST"
+  - "Fix cancel field name: change frontend from 'reason' to 'cancellation_reason'"
+  - "Fix payment processRide response handling"
+  - "Verify all fixes don't break existing tests"
 ---
 
-# Plan — builder-2: Fix Auth Response Unwrap + Fallback URL
-
-## Objective
-Fix CRITICAL auth response format mismatch and HIGH-priority shared package issues found by QA.
-
-## Context from QA
-Backend API wraps all responses in `{ success: bool, message: string, data: { ... } }` format. The frontend ApiClient returns the raw JSON, and auth hooks expect `{ user, token }` at the top level — but the backend sends `{ success, message, data: { user, token } }`. This means login never works — user and token are always undefined.
-
-## Tasks
-
-### Task A (CRITICAL): Fix ApiClient response unwrapping ✅
-- File: `mobile/packages/shared/src/api/client.ts`
-- Added envelope detection after `response.json()`: checks for `success`+`data` keys
-- If envelope detected and `success===true`: returns `data.data` (strips envelope)
-- If envelope detected and `success===false`: throws ApiError with message from response
-- If no envelope: falls through to existing behavior (backward compatible)
-- Login POST now correctly extracts `{ user, token }` from data envelope
-
-### Task B (HIGH): Fix fallback URL port ✅
-- File: `mobile/packages/shared/src/api/client.ts`
-- Changed `'http://localhost:8080/api'` → `'http://localhost:9000/api'`
-
-### Task C (LOW): Gate console.warn with __DEV__ ✅
-- Files: `client.ts`, `useAuth.ts`, `useSocket.ts`
-- All 10 `console.warn` statements wrapped with `if (__DEV__)`
-
 ## Acceptance Criteria
-- [x] Auth response unwrapping works: login returns user+token correctly
-- [x] Non-wrapped API responses still work (backward compatible)
-- [x] Fallback URL uses port 9000
-- [x] All console.warn gated behind __DEV__
-- [x] `npx tsc --noEmit` passes in packages/shared
-- [x] Login curl test succeeds end-to-end
-
-## context_files
-- mobile/packages/shared/src/api/client.ts
-- mobile/packages/shared/src/hooks/useAuth.ts
-- mobile/packages/shared/src/hooks/useSocket.ts
-- team/GAPS.md
-
-## quality_gates
-- [x] `npx tsc --noEmit` passes in packages/shared
-- [x] No `any` types in changed code
-- [x] Login works: curl posts to backend and gets user+token
+- [ ] Reports API calls route to correct backend URLs
+- [ ] auth.me() returns correctly-shaped user data
+- [ ] rides.create() returns correctly-shaped ride data
+- [ ] drivers.updateVehicle() doesn't 404
+- [ ] rides.cancel() sends correct field name
+- [ ] payments.processRide() handles response format
+- [ ] All backend PHPUnit tests still pass

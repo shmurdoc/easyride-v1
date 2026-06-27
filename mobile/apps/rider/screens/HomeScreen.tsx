@@ -4,16 +4,14 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth, rides, COLORS, MAP_REGION, RIDE_CATEGORIES, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
-import { GlowButton, CategoryTile, AnimatedNumber } from '@easyryde/shared';
-import { Typography } from '@easyryde/shared';
-import type { RiderNav } from '@easyryde/shared';
+import { useAuth, rides, COLORS, MAP_REGION, RIDE_CATEGORIES, SPACING, RADIUS } from '@easyryde/shared';
+import { GlowButton, CategoryTile } from '@easyryde/shared';
+import type { RiderNav, RiderMainTabParamList } from '@easyryde/shared';
+import type { RouteProp } from '@react-navigation/native';
 
 const CATEGORIES = [
-  { id: 'ride', label: 'Ride', icon: 'car-outline' as const, badge: 'Promo', route: 'BookRide' },
-  { id: 'delivery', label: 'Delivery', icon: 'cube-outline' as const, badge: null, route: 'RestaurantList' },
+  { id: 'ride', label: 'Ride', icon: 'car-outline' as const, badge: 'Promo', route: 'BookRide' as const },
   { id: 'travel', label: 'Travel', icon: 'airplane-outline' as const, badge: null, route: null },
-  { id: 'food', label: 'Food', icon: 'restaurant-outline' as const, badge: null, route: 'RestaurantList' },
 ] as const;
 
 const RECENT_LOCATIONS = [
@@ -21,7 +19,7 @@ const RECENT_LOCATIONS = [
   { id: '2', name: 'Mechnykova St, 19', subtitle: 'Phalaborwa, Limpopo' },
 ];
 
-export default function HomeScreen({ navigation }: { navigation: RiderNav }) {
+export default function HomeScreen({ navigation, route }: { navigation: RiderNav; route: RouteProp<RiderMainTabParamList, 'Home'> }) {
   const { user } = useAuth();
   const [pickup, setPickup] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [dropoff, setDropoff] = useState<{ lat: number; lng: number; address: string } | null>(null);
@@ -30,6 +28,14 @@ export default function HomeScreen({ navigation }: { navigation: RiderNav }) {
   const dropoffScale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => { getCurrentLocation(); }, []);
+
+  useEffect(() => {
+    const dropoffParam = route.params?.dropoff;
+    if (dropoffParam) {
+      setDropoff({ lat: dropoffParam.lat, lng: dropoffParam.lng, address: dropoffParam.name });
+      navigation.setParams({ dropoff: undefined } as any);
+    }
+  }, [route.params?.dropoff]);
 
   async function getCurrentLocation() {
     try {
@@ -57,11 +63,11 @@ export default function HomeScreen({ navigation }: { navigation: RiderNav }) {
     try {
       const ride = await rides.create({
         category: selectedCategory,
-        pickup_latitude: pickup.lat,
-        pickup_longitude: pickup.lng,
+        pickup_lat: pickup.lat,
+        pickup_lng: pickup.lng,
         pickup_address: pickup.address,
-        dropoff_latitude: dropoff.lat,
-        dropoff_longitude: dropoff.lng,
+        dropoff_lat: dropoff.lat,
+        dropoff_lng: dropoff.lng,
         dropoff_address: dropoff.address,
         payment_method: 'cash',
       });
@@ -122,7 +128,7 @@ export default function HomeScreen({ navigation }: { navigation: RiderNav }) {
             ))}
           </View>
 
-          <TouchableOpacity style={styles.searchBar}>
+          <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('BookRide')}>
             <Ionicons name="search" size={18} color={COLORS.textMuted} />
             <Text style={styles.searchText}>Where to?</Text>
             <View style={styles.nowPill}>

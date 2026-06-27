@@ -16,11 +16,7 @@ class EscrowServiceTest extends TestCase
         $payment = Payment::factory()->create(['status' => 'pending']);
         $service = app(EscrowService::class);
 
-        $result = $service->holdPayment($payment);
-
-        if ($result) {
-            $payment = $payment->fresh();
-        }
+        $service->holdPayment($payment);
 
         $this->assertEquals('held', $payment->fresh()->status);
         $this->assertNotNull($payment->fresh()->held_until);

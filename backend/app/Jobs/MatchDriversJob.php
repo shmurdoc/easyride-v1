@@ -19,6 +19,10 @@ class MatchDriversJob implements ShouldQueue
 
     public function handle(RideMatchingService $rideMatchingService): void
     {
-        $rideMatchingService->findNearbyDrivers($this->ride);
+        $rideMatchingService->findNearbyDrivers(
+            (float) $this->ride->pickup_latitude,
+            (float) $this->ride->pickup_longitude,
+            $this->ride->category,
+        );
     }
 }

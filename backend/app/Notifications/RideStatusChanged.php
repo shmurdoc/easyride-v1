@@ -73,7 +73,7 @@ class RideStatusChanged extends Notification implements ShouldQueue
         $smsService->sendRideStatusUpdate($phone, $this->status, $driverName);
     }
 
-    public function broadcastOn(object $notifiable): array
+    public function broadcastOn(?object $notifiable = null): array
     {
         return ['ride.'.$this->ride->id];
     }

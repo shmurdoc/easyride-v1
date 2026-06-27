@@ -10,6 +10,7 @@ use App\Http\Requests\Api\V1\Wallet\WalletWithdrawRequest;
 use App\Models\Wallet;
 use App\Services\OzowService;
 use App\Services\PayFastService;
+use App\Services\StripeService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class WalletController extends Controller
         protected WalletService $walletService,
         protected PayFastService $payFastService,
         protected OzowService $ozowService,
+        protected StripeService $stripeService,
     ) {}
 
     public function show(Request $request): JsonResponse
@@ -107,6 +109,17 @@ class WalletController extends Controller
             ], 201);
         }
 
+        if ($method === 'stripe') {
+            $intent = $this->stripeService->createPaymentIntent($amount);
+
+            return response()->json([
+                'transaction' => $transaction,
+                'client_secret' => $intent['client_secret'] ?? null,
+                'payment_intent_id' => $intent['id'] ?? null,
+                'message' => 'Confirm payment with Stripe to complete deposit.',
+            ], 201);
+        }
+
         return response()->json(['message' => 'Invalid payment method.'], 422);
     }
 
@@ -116,21 +129,21 @@ class WalletController extends Controller
 
         $wallet = $this->walletService->getOrCreateWallet($request->user());
 
-        if (! $this->walletService->hasSufficientFunds($wallet, (float) $validated['amount'])) {
+        try {
+            $transaction = $this->walletService->debit(
+                $wallet,
+                (float) $validated['amount'],
+                'withdrawal',
+                $wallet->id,
+                'Wallet withdrawal (pending admin approval)',
+            );
+        } catch (\RuntimeException $e) {
             return response()->json([
-                'message' => 'Insufficient balance.',
-                'balance' => (float) $wallet->balance,
+                'message' => $e->getMessage(),
+                'balance' => (float) $wallet->fresh()->balance,
                 'requested' => (float) $validated['amount'],
             ], 422);
         }
-
-        $transaction = $this->walletService->debit(
-            $wallet,
-            (float) $validated['amount'],
-            'withdrawal',
-            $wallet->id,
-            'Wallet withdrawal (pending admin approval)',
-        );
 
         return response()->json([
             'transaction' => $transaction,

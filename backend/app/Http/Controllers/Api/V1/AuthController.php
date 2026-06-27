@@ -85,8 +85,12 @@ class AuthController extends Controller
 
     public function createDriver(CreateDriverRequest $request): JsonResponse
     {
+        if (! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validated();
-        $tenantId = $validated['tenant_id'] ?? $request->user()->tenant_id;
+        $tenantId = $request->user()->tenant_id;
 
         $user = User::create([
             'tenant_id' => $tenantId,

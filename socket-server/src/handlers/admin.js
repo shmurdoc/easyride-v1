@@ -52,7 +52,8 @@ module.exports = function registerAdminHandlers(socket, io) {
 
   socket.on('admin:active-rides', async () => {
     try {
-      const rideKeys = await dataClient.keys('ride:pending:*');
+      const { scanKeys } = require('../utils/scanKeys');
+      const rideKeys = await scanKeys(dataClient, 'ride:pending:*');
       const rides = [];
 
       for (const key of rideKeys) {

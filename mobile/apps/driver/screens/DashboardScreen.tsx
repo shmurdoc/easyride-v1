@@ -60,8 +60,13 @@ export default function DashboardScreen({ navigation }: { navigation: DriverNav 
     return () => unsub();
   }, [isConnected]);
 
+  const watcherRef = useRef<Location.LocationSubscription | null>(null);
+
   useEffect(() => {
     checkLocationPermission();
+    return () => {
+      watcherRef.current?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -106,6 +111,7 @@ export default function DashboardScreen({ navigation }: { navigation: DriverNav 
       },
     );
     setLocationWatcher(watcher);
+    watcherRef.current = watcher;
   }
 
   async function startBackgroundLocation() {
@@ -129,6 +135,7 @@ export default function DashboardScreen({ navigation }: { navigation: DriverNav 
 
   function stopForegroundLocation() {
     locationWatcher?.remove();
+    watcherRef.current = null;
     setLocationWatcher(null);
   }
 

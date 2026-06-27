@@ -78,7 +78,11 @@ class ScheduledRideService
                     'ride_id' => $ride->id,
                 ]);
 
-                $this->matchingService->findAndNotifyDrivers($ride);
+                $this->matchingService->findNearbyDrivers(
+                    (float) $ride->pickup_latitude,
+                    (float) $ride->pickup_longitude,
+                    $ride->category,
+                );
                 $dispatched++;
             } catch (\Exception $e) {
                 Log::error('Scheduled ride dispatch failed', [

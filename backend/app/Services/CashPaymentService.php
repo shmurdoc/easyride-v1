@@ -129,13 +129,19 @@ class CashPaymentService
     private function createCashReconciliationRecord(Payment $payment): void
     {
         try {
+            $ride = $payment->ride;
+            $driverEarns = round((float) $payment->amount - (float) $payment->platform_fee, 2);
+
             DB::table('cash_reconciliations')->insert([
                 'id' => (string) Str::uuid(),
                 'payment_id' => $payment->id,
                 'ride_id' => $payment->ride_id,
                 'driver_id' => $payment->payee_id,
-                'expected_amount' => $payment->amount,
+                'rider_id' => $payment->payer_id,
+                'fare_amount' => $payment->amount,
                 'platform_fee' => $payment->platform_fee,
+                'driver_earns' => $driverEarns,
+                'driver_marked_at' => now(),
                 'status' => 'pending',
                 'created_at' => now(),
                 'updated_at' => now(),

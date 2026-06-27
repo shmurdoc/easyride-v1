@@ -11,7 +11,7 @@ use Stripe\Webhook;
 
 class StripeService
 {
-    private readonly ?StripeClient $stripe;
+    protected readonly ?StripeClient $stripe;
 
     public function __construct()
     {
@@ -20,7 +20,7 @@ class StripeService
         $this->stripe = $secretKey ? new StripeClient($secretKey) : null;
     }
 
-    private function getStripe(): StripeClient
+    protected function getStripe(): StripeClient
     {
         if (! $this->stripe) {
             throw new \RuntimeException('Stripe is not configured.');

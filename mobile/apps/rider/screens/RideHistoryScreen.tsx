@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FlatList, TouchableOpacity, StyleSheet, Alert, Linking, Animated, View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { rides, api, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
+import { rides, COLORS, GRADIENTS, SPACING, RADIUS } from '@easyryde/shared';
 import { ActivityCard, Shimmer, GradientText } from '@easyryde/shared';
 import type { Ride } from '@easyryde/shared';
 
@@ -32,7 +32,7 @@ export default function RideHistoryScreen({ navigation }: any) {
     return (
       <Animated.View style={style}>
         <TouchableOpacity
-          onPress={() => navigation.navigate('RideTracking', { rideId: item.id })}
+          onPress={() => navigation.navigate('RideDetail', { rideId: item.id })}
           style={styles.listItem}
         >
           <View style={styles.listIcon}>
@@ -85,7 +85,7 @@ export default function RideHistoryScreen({ navigation }: any) {
                 <Text style={styles.sectionLabel}>Past</Text>
                 <ActivityCard
                   ride={recentRide}
-                  onPress={() => navigation.navigate('RideTracking', { rideId: recentRide.id })}
+                  onPress={() => navigation.navigate('RideDetail', { rideId: recentRide.id })}
                 />
               </>
             )}

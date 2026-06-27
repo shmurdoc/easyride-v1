@@ -3,7 +3,7 @@ export type {
   WalletTransaction, Rating, PromoCode, Delivery, DeliveryStatus, ChatMessage, DriverLocation,
   PlatformConfig, RideCategoryConfig, PaymentMethodConfig, PaginatedResponse, ApiResponse,
   Restaurant, RestaurantCategory, MenuItem, CartItem, FoodOrder, FoodOrderStatus, FoodOrderItem,
-  RiderAuthStackParamList, RiderStackParamList, DriverStackParamList, AdminStackParamList,
+  RiderAuthStackParamList, RiderStackParamList, RiderMainTabParamList, DriverStackParamList, AdminStackParamList,
   RiderAuthNav, RiderNav, DriverNav, AdminNav, RiderRoute, DriverRoute, AdminRoute,
 } from './types';
 export * from './api';

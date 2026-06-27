@@ -24,6 +24,8 @@ import RestaurantsPage from '@/pages/RestaurantsPage';
 import FoodOrdersPage from '@/pages/FoodOrdersPage';
 import AuditLogPage from '@/pages/AuditLogPage';
 import PayoutsPage from '@/pages/PayoutsPage';
+import FinancialDashboard from '@/pages/FinancialDashboard';
+import NotificationManager from '@/pages/NotificationManager';
 import NotFoundScreen from '@/pages/NotFoundScreen';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -62,6 +64,8 @@ export default function App() {
             <Route path="restaurants" element={<RestaurantsPage />} />
             <Route path="food-orders" element={<FoodOrdersPage />} />
             <Route path="payouts" element={<PayoutsPage />} />
+            <Route path="financial" element={<FinancialDashboard />} />
+            <Route path="notifications" element={<NotificationManager />} />
           </Route>
           <Route path="*" element={<NotFoundScreen />} />
         </Routes>

@@ -8,6 +8,7 @@ use App\Events\NewRideRequest;
 use App\Models\Ride;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 class RideMatchingService
 {
@@ -28,50 +29,52 @@ class RideMatchingService
         string $category = 'standard',
         float $radiusKm = 5.0,
     ): Collection {
-        $haversine = '(
-            6371 * acos(
-                cos(radians(?))
-                * cos(radians(current_latitude))
-                * cos(radians(current_longitude) - radians(?))
-                + sin(radians(?))
-                * sin(radians(current_latitude))
-            )
-        )';
-
         return User::role('driver')
             ->where('is_online', true)
             ->whereNull('current_ride_id')
             ->whereHas('vehicle', fn ($q) => $q->where('category', $category)->where('is_active', true))
             ->select('*')
-            ->selectRaw("{$haversine} AS distance", [$lat, $lng, $lat])
-            ->having('distance', '<=', $radiusKm)
+            ->selectRaw(
+                '(6371 * acos(cos(radians(?)) * cos(radians(current_latitude)) * cos(radians(current_longitude) - radians(?)) + sin(radians(?)) * sin(radians(current_latitude)))) AS distance',
+                [$lat, $lng, $lat]
+            )
             ->orderBy('distance')
-            ->get();
+            ->get()
+            ->filter(fn ($user) => ($user->distance ?? PHP_FLOAT_MAX) <= $radiusKm)
+            ->values();
     }
 
     public function assignDriver(Ride $ride, User $driver): Ride
     {
-        $distance = $this->calculateDistance(
-            (float) $ride->pickup_latitude,
-            (float) $ride->pickup_longitude,
-            (float) $driver->current_latitude,
-            (float) $driver->current_longitude,
-        );
+        return DB::transaction(function () use ($ride, $driver) {
+            $lockedRide = Ride::where('id', $ride->id)->where('status', 'searching')->lockForUpdate()->first();
 
-        $ride->update([
-            'driver_id' => $driver->id,
-            'status' => 'accepted',
-            'driver_eta' => $this->calculateETA(
+            if (! $lockedRide) {
+                throw new \RuntimeException('Ride is no longer available.');
+            }
+
+            $distance = $this->calculateDistance(
+                (float) $lockedRide->pickup_latitude,
+                (float) $lockedRide->pickup_longitude,
                 (float) $driver->current_latitude,
                 (float) $driver->current_longitude,
-                (float) $ride->pickup_latitude,
-                (float) $ride->pickup_longitude,
-            ),
-        ]);
+            );
 
-        $driver->update(['current_ride_id' => $ride->id]);
+            $lockedRide->update([
+                'driver_id' => $driver->id,
+                'status' => 'accepted',
+                'driver_eta' => $this->calculateETA(
+                    (float) $driver->current_latitude,
+                    (float) $driver->current_longitude,
+                    (float) $lockedRide->pickup_latitude,
+                    (float) $lockedRide->pickup_longitude,
+                ),
+            ]);
 
-        return $ride->fresh();
+            $driver->update(['current_ride_id' => $lockedRide->id]);
+
+            return $lockedRide->fresh();
+        });
     }
 
     public function calculateDistance(float $lat1, float $lng1, float $lat2, float $lng2): float

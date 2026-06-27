@@ -1,67 +1,47 @@
 ---
+project: "EasyRyde"
+purpose: "Member plan — current task objectives and deliverables"
 member_id: "qa-lead-integration"
-ticket: "QA-INTEGRATION-001"
-priority: "high"
-est_hours: 3
-assigned_at: "2026-06-15"
-due_by: "2026-06-15"
-status: done
+type: "qa-lead"
+ticket: "GAP-PHPUNIT-DB-001"
+owner: "QA — Integration (Docker, E2E, CI)"
+status: "done"
 lock: false
-review_required: true
+priority: "high"
+review_required: false
+time_estimate: ""
+time_spent: ""
+context_files: []
+strict_scope: false
+artifact_refs: []
+created_at: "2026-06-18T03:00:00Z"
+updated_by: "recover.mjs"
+updated_at: "2026-06-24T01:01:25.549Z"
 ---
 
-# Plan — qa-lead-integration: CI/CD Pipeline QA + Python Tests
+# Plan — qa-lead-integration (qa-lead)
 
-## Objective
-Test and verify CI/CD pipelines (GitHub Actions), Python test scripts, Docker/docker-compose configuration, and all integration points.
+## Current Task
+(completed)
 
-## Context from Previous QA
-- Frontend QA found 16 issues — all now fixed by builders
-- Backend is running on localhost:9000 with SQLite 
-- GitHub Actions CI workflow exists at `.github/workflows/ci.yml`
-- Python tests may exist in the repo for CI validation
+## Deliverables
+GAP-PHPUNIT-DB-001 — phpunit.xml fixed for PostgreSQL
 
-## Tasks
-
-### Task A: GitHub Actions Pipeline QA
-- [x] Read all workflow files in `.github/workflows/`
-- [x] Verify CI workflow structure (jobs, steps, triggers)
-- [x] Check if backend tests (PHP/Pest) run in CI
-- [x] Check if mobile/Android builds in CI
-- [x] Check if linting/type-checking runs in CI
-- [x] Verify deploy workflow if it exists
-- [x] Check for any obvious issues: wrong paths, missing secrets, syntax errors
-- [x] Recommend improvements
-
-### Task B: Python Test Scripts
-- [x] Find any Python test files in the repo (`**/*.py`)
-- [x] Check for pytest configuration
-- [x] Run available Python tests
-- [x] If no Python tests exist, note the gap
-- [x] Check if Python is used in CI pipeline
-
-### Task C: Docker / docker-compose
-- [x] Read `docker-compose.yml` at repo root
-- [x] Verify services defined match actual project structure
-- [x] Check if Docker setup works for local development
-- [x] Identify any issues (missing services, wrong ports, env vars)
-
-### Task D: Integration Health Checks
-- [x] Verify backend API health endpoint works
-- [x] Test a full flow: login → authenticated endpoint
-- [x] Verify CORS configuration allows mobile apps
-- [x] Check Sanctum/Sanctum config for API auth
+## Preconditions
+(none)
 
 ## Acceptance Criteria
-- [x] CI workflow files are valid and complete
-- [x] Python tests run (or gap documented)
-- [x] docker-compose valid and matches project
-- [x] Backend API health endpoint responds (with noted issues)
-- [x] Login flow works end-to-end
-- [x] Integration report generated
+- [x] phpunit.xml uses PostgreSQL for CI
+- [x] All prior tasks complete (GAP-COV-001, GAP-CRIT-007, QA-INTEGRATION-001)
 
-## quality_gates
-- [x] CI workflow valid (manual review — 2 issues found)
-- [x] Python tests: gap (no pytest, scripts are standalone manual tools)
-- [x] Backend health endpoint responds (unhealthy status — see issues)
-- [ ] No critical integration gaps (queue health check fails — see critical issue)
+## Context Files
+Read ONLY the files listed in the frontmatter context_files field, plus your own 4 files. Nothing else.
+
+## Strict Scope
+strict_scope: false
+
+## Completed Tasks
+- GAP-COV-001 — Coverage configured (API, Web, AI)
+- GAP-CRIT-007 — Docker stack verified, Playwright 88/96 pass
+- QA-INTEGRATION-001 — CI/CD pipeline QA, 5 issues found
+- GAP-PHPUNIT-DB-001 — phpunit.xml fixed for PostgreSQL

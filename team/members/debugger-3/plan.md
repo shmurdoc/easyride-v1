@@ -1,36 +1,25 @@
 ---
-member_id: "debugger-3"
-ticket: "GAP-TYPECHECK-001"
-priority: "low"
-est_hours: 1
-assigned_at: "2026-06-13"
-due_by: "2026-06-13"
-status: idle
-lock: false
+objective: "Investigate 68 backend PHPUnit test failures — find root cause"
+ticket: "FIX-BACKEND-TEST-FAILURES-001"
+state: running
+priority: "critical"
+estimated_hours: 2
+context_files:
+  - backend/phpunit.xml
+  - backend/tests/
+  - backend/app/Services/EscrowService.php
+  - backend/tests/Feature/AdminTest.php
+  - backend/app/Services/FoodDeliveryService.php
+quality_gates:
+  - "Run PHPUnit to reproduce failures"
+  - "Categorize failures by root cause (env config vs real bug)"
+  - "Fix any simple config issues (DB setup, env vars)"
+  - "For real bugs: report with file/line and proposed fix"
+  - "Verify all tests pass after fixes"
 ---
 
-# Plan — debugger-3: Fix Shared Package TypeScript Types
-
-## Objective
-Fix `packages/shared` TypeScript typecheck so `npx tsc --noEmit` exits 0 by adding missing `@types/react-native` as devDependency.
-
-## Context
-- `packages/shared` can't typecheck independently because `@types/react-native` is missing as devDependency
-- The apps themselves have it (inherited from Expo SDK 51)
-
-## Steps
-1. Run `npx tsc --noEmit` in `mobile/packages/shared` to see the current errors
-2. Check what types are missing
-3. Add missing `@types/react-native` (or other missing `@types/*`) to `mobile/packages/shared/package.json` devDependencies
-4. Run `npx tsc --noEmit` again — confirm 0 errors
-
 ## Acceptance Criteria
-- [ ] `npx tsc --noEmit` in `packages/shared` exits 0
-- [ ] Types added as devDependencies only (not dependencies)
-
-## context_files
-- mobile/packages/shared/package.json
-- mobile/packages/shared/tsconfig.json
-
-## quality_gates
-- [ ] `npx tsc --noEmit` in shared package exits 0
+- [ ] Root cause identified for each failing test
+- [ ] Tests categorized: env vs bug
+- [ ] Env-config issues fixed
+- [ ] Real bugs reported with fix suggestions

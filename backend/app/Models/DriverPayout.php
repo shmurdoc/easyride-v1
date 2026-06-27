@@ -15,7 +15,7 @@ class DriverPayout extends Model
     public $incrementing = false;
 
     protected $fillable = [
-        'driver_id', 'amount', 'method', 'status',
+        'tenant_id', 'driver_id', 'amount', 'method', 'status',
         'reference', 'notes', 'processed_at', 'period_start', 'period_end',
     ];
 

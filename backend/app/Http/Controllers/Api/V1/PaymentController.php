@@ -37,7 +37,7 @@ class PaymentController extends Controller
     {
         $payments = Payment::where('payer_id', $request->user()->id)
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
-            ->when($request->method, fn ($q, $v) => $q->where('method', $v))
+            ->when($request->input('method'), fn ($q, $v) => $q->where('method', $v))
             ->with('ride')
             ->latest()
             ->paginate($request->per_page ?? 15);
@@ -299,14 +299,31 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
+            'ride_id' => 'sometimes|string|uuid|exists:rides,id',
             'currency' => 'sometimes|string|size:3',
             'metadata' => 'sometimes|array',
         ]);
 
+        $amount = (float) $validated['amount'];
+
+        if (! empty($validated['ride_id'])) {
+            $ride = Ride::findOrFail($validated['ride_id']);
+            if ($ride->rider_id !== $request->user()->id) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
+            if ($amount !== (float) $ride->total_fare) {
+                return response()->json(['message' => 'Amount must match ride total fare.'], 422);
+            }
+        } else {
+            $maxAmount = config('app.max_stripe_amount', 50000);
+            if ($amount > $maxAmount) {
+                return response()->json(['message' => 'Amount exceeds maximum of R'.$maxAmount.'.'], 422);
+            }
+        }
+
         $intent = $this->stripeService->createPaymentIntent(
-            (float) $validated['amount'],
+            $amount,
             $validated['currency'] ?? 'zar',
-            $validated['metadata'] ?? [],
         );
 
         return response()->json($intent);
@@ -326,6 +343,11 @@ class PaymentController extends Controller
     public function refund(RefundRequest $request, Payment $payment): JsonResponse
     {
         $user = $request->user();
+
+        if ($payment->payer_id !== $user->id && $payment->payee_id !== $user->id && ! $user->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validated();
 
         $result = $this->refundService->processRefund(
@@ -376,6 +398,7 @@ class PaymentController extends Controller
 
         $recentCount = Payment::where('payer_id', $userId)
             ->where('created_at', '>=', $windowStart)
+            ->whereIn('status', [Payment::STATUS_COMPLETED, Payment::STATUS_ESCROW_HELD])
             ->count();
 
         if ($recentCount >= 5) {
@@ -387,7 +410,7 @@ class PaymentController extends Controller
 
         $recentAmount = (float) Payment::where('payer_id', $userId)
             ->where('created_at', '>=', $windowStart)
-            ->whereIn('status', [Payment::STATUS_PAID, Payment::STATUS_ESCROW_HELD, Payment::STATUS_PENDING])
+            ->whereIn('status', [Payment::STATUS_COMPLETED, Payment::STATUS_ESCROW_HELD])
             ->sum('amount');
 
         $hourlyLimit = (float) config('easyryde.payment.velocity.hourly_limit', 5000.00);

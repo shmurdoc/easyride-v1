@@ -9,6 +9,7 @@ use App\Models\SosAlert;
 use App\Models\User;
 use App\Notifications\SosAlert as SosAlertNotification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class SosService
 {
@@ -27,7 +28,7 @@ class SosService
         ]);
 
         if ($ride) {
-            $ride->notify(new SosAlertNotification($ride, "{$lat}, {$lng}"));
+            Notification::send($user, new SosAlertNotification($ride, "{$lat}, {$lng}"));
         }
 
         $this->sendAdminAlerts($user, $ride, $lat, $lng);

@@ -38,9 +38,7 @@ class StripeService
 
     public function handleWebhook(string $payload, string $sigHeader): array
     {
-        $event = Webhook::constructEvent(
-            $payload, $sigHeader, config('services.stripe.webhook_secret')
-        );
+        $event = $this->constructEvent($payload, $sigHeader);
 
         return match ($event->type) {
             'payment_intent.succeeded' => $this->handlePaymentSucceeded($event->data->object),
@@ -80,6 +78,13 @@ class StripeService
         }
 
         return ['handled' => true, 'status' => 'refunded'];
+    }
+
+    protected function constructEvent(string $payload, string $sigHeader): mixed
+    {
+        return Webhook::constructEvent(
+            $payload, $sigHeader, config('services.stripe.webhook_secret')
+        );
     }
 
     public function refund(string $paymentIntentId, ?int $amount = null): array

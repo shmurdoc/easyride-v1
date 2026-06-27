@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { useAuth, COLORS, Typography, Input, Button, useTranslation } from '@easyryde/shared';
-import { SPACING } from '@easyryde/shared';
+import { useAuth, COLORS, SPACING, Typography, Input, Button, useTranslation } from '@easyryde/shared';
 
 export default function LoginScreen() {
   const { login } = useAuth();

@@ -36,7 +36,10 @@ class FoodDeliveryController extends Controller
                 );
             })
             ->withCount('menuItems')
-            ->orderBy($request->sort ?? 'name', $request->order ?? 'asc')
+            ->orderBy(
+                in_array($request->sort, ['name', 'created_at', 'rating', 'delivery_fee']) ? $request->sort : 'name',
+                in_array($request->order, ['asc', 'desc']) ? $request->order : 'asc'
+            )
             ->paginate($request->per_page ?? 15);
 
         return response()->json($restaurants);

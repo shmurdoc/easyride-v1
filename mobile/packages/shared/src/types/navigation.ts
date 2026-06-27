@@ -5,6 +5,7 @@ import type { RouteProp, NavigatorScreenParams } from '@react-navigation/native'
 export type RiderAuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 };
 
 // Rider Tab Navigation
@@ -21,6 +22,7 @@ export type RiderStackParamList = {
   RideTracking: { rideId: string };
   Payment: { rideId: string };
   RideHistory: undefined;
+  RideDetail: { rideId: string };
   Chat: { rideId: string; receiverId: string };
   RestaurantList: undefined;
   RestaurantMenu: { restaurantId: string };

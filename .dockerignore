@@ -1,19 +1,22 @@
-# Dependencies
-backend/vendor
-backend/node_modules
-
-# Build artifacts
 .git
-.github
+.gitignore
+.gstack
+node_modules
+vendor
+.vite
+dist
+storage
 .idea
-.vscode
-.env
-.env.*
-*.log
-
-# OS files
 .DS_Store
-Thumbs.db
-
-# Socket server (Node.js, separate)
-backend/socket-server/node_modules
+mobile
+web
+socket-server
+team
+setup
+scripts
+docker-compose*.yml
+*.md
+backend/.env
+backend/node_modules
+backend/public/build
+backend/storage

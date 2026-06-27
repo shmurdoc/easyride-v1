@@ -1,11 +1,11 @@
-version: '3.8'
-
 networks:
   frontend:
     driver: bridge
+    name: easyryde_frontend
   backend:
     driver: bridge
     internal: true
+    name: easyryde_backend
 
 volumes:
   postgres_data:
@@ -19,9 +19,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./.docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/api.conf:/etc/nginx/conf.d/default.conf:ro
       - ./public:/var/www/html/public:ro
       - easyryde_storage:/var/www/html/storage:ro
+      - ./ssl:/etc/letsencrypt:ro
+      - ./ssl-www:/var/www/html/letsencrypt
     networks:
       - frontend
       - backend
@@ -51,6 +53,22 @@ services:
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=easyryde
+      - DB_USERNAME=easyryde
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+      - REDIS_CACHE_DB=1
+      - REDIS_PREFIX=easyryde_
+      - QUEUE_CONNECTION=redis
+      - BROADCAST_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - CACHE_STORE=redis
     restart: unless-stopped
     deploy:
       resources:
@@ -63,7 +81,7 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.4
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -103,15 +121,19 @@ services:
 
   socket-server:
     build:
-      context: .docker/socket
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: .docker/socket/Dockerfile
     volumes:
       - ./socket-server:/app
+    ports:
+      - "13099:3001"
     networks:
       - frontend
       - backend
     environment:
       - NODE_ENV=production
+      - APP_API_BASE_URL=http://nginx
+      - JWT_SECRET=${JWT_SECRET}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -135,6 +157,22 @@ services:
       - backend
     environment:
       - APP_ENV=production
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=easyryde
+      - DB_USERNAME=easyryde
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+      - REDIS_CACHE_DB=1
+      - REDIS_PREFIX=easyryde_
+      - QUEUE_CONNECTION=redis
+      - BROADCAST_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - CACHE_STORE=redis
     restart: unless-stopped
     deploy:
       resources:
@@ -163,3 +201,12 @@ services:
       resources:
         limits:
           memory: 128M
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./ssl:/etc/letsencrypt
+      - ./ssl-www:/var/www/html/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - frontend

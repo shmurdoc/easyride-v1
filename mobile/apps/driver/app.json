@@ -9,17 +9,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "za.co.easyryde.driver",
-      "config": {
-        "googleMapsApiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "EasyRyde uses your location to find nearby ride requests.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "EasyRyde uses your location to track your trips in real time."
+      },
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "android": {
-      "package": "za.co.easyryde.driver",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
-        }
-      }
+      "package": "za.co.easyryde.driver"
     },
     "plugins": [
       "expo-location",
@@ -28,7 +27,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow EasyRyde to track your location for ride requests."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

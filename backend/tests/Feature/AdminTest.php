@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Ride;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -13,17 +14,20 @@ class AdminTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected Tenant $tenant;
+
     protected function setUp(): void
     {
         parent::setUp();
         Role::create(['name' => 'rider', 'guard_name' => 'web']);
         Role::create(['name' => 'driver', 'guard_name' => 'web']);
         Role::create(['name' => 'admin', 'guard_name' => 'web']);
+        $this->tenant = Tenant::create(['name' => 'Test Tenant', 'slug' => 'test-tenant', 'domain' => 'test.local']);
     }
 
     public function test_admin_can_get_dashboard_stats(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['tenant_id' => $this->tenant->id]);
         $admin->assignRole('admin');
         Sanctum::actingAs($admin);
 
@@ -40,11 +44,11 @@ class AdminTest extends TestCase
 
     public function test_admin_can_list_users(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['tenant_id' => $this->tenant->id]);
         $admin->assignRole('admin');
         Sanctum::actingAs($admin);
 
-        User::factory()->count(3)->create();
+        User::factory()->count(3)->create(['tenant_id' => $this->tenant->id]);
 
         $response = $this->getJson('/api/v1/admin/users');
 

@@ -42,6 +42,22 @@ class PartnerWebhookController extends Controller
             return response()->json(['message' => 'Order not found.'], 404);
         }
 
+        $statusMap = [
+            'confirmed' => 'confirmed',
+            'preparing' => 'preparing',
+            'ready' => 'ready_for_pickup',
+            'picked_up' => 'in_transit',
+            'delivered' => 'delivered',
+            'cancelled' => 'cancelled',
+        ];
+
+        $newStatus = $statusMap[$validated['status']] ?? $validated['status'];
+
+        $delivery->update([
+            'status' => $newStatus,
+            'delivered_at' => $newStatus === 'delivered' ? now() : null,
+        ]);
+
         return response()->json(['message' => 'Status updated']);
     }
 }

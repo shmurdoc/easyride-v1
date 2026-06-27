@@ -96,13 +96,33 @@ function recover() {
         const planContent = fs.existsSync(planPath) ? fs.readFileSync(planPath, 'utf8') : '';
         const planFm = planContent ? parseFrontmatter(planContent) : {};
 
+        const hasProgress = statusFm.current_progress && statusFm.current_progress.trim() !== '';
+        const progressLower = (statusFm.current_progress || '').toLowerCase();
+        const workComplete = hasProgress && (
+          progressLower.includes('done') ||
+          progressLower.includes('completed') ||
+          progressLower.includes('fixed') ||
+          progressLower.includes('resolved') ||
+          progressLower.includes('pass') ||
+          progressLower.includes('verified') ||
+          progressLower.includes('clean')
+        );
+
+        const targetState = workComplete ? 'done' : 'blocked';
+        const targetLock = workComplete ? false : false;
+        const completedAt = workComplete ? now() : '';
+        const blockedReason = workComplete
+          ? ''
+          : `Auto-recovered: stale session (started ${statusFm.started_at}, >30 min without completion)`;
+
         const newStatusFm = {
           ...statusFm,
-          state: 'blocked',
+          state: targetState,
+          lock: targetLock,
           current_progress: statusFm.current_progress || '',
           started_at: statusFm.started_at || '',
-          completed_at: '',
-          blocked_reason: `Auto-recovered: stale session (started ${statusFm.started_at}, >30 min without completion)`,
+          completed_at: completedAt,
+          blocked_reason: blockedReason,
           updated_by: 'recover.mjs',
           updated_at: now()
         };
@@ -110,7 +130,7 @@ function recover() {
         const newPlanFm = {
           ...planFm,
           lock: false,
-          status: 'blocked',
+          status: targetState,
           member_id: planFm.member_id || memberId,
           updated_by: 'recover.mjs',
           updated_at: now()
@@ -134,7 +154,53 @@ function recover() {
         fs.writeFileSync(planPath, buildPlanContent(memberId, newPlanFm));
 
         staleSessions.push({ memberId, startedAt, ticket: planFm.ticket || '(unassigned)' });
-        recovered.push({ memberId, type: 'stale', detail: `state=running -> blocked (stale since ${startedAt})` });
+        recovered.push({ memberId, type: workComplete ? 'stale_done' : 'stale', detail: `state=running -> ${targetState} (stale since ${startedAt}${workComplete ? ', work complete' : ''})` });
+      }
+    }
+
+    if (statusFm.state === 'blocked') {
+      const progressLower = (statusFm.current_progress || '').toLowerCase();
+      const hasProgress = statusFm.current_progress && statusFm.current_progress.trim() !== '';
+      const workComplete = hasProgress && (
+        progressLower.includes('done') ||
+        progressLower.includes('completed') ||
+        progressLower.includes('fixed') ||
+        progressLower.includes('resolved') ||
+        progressLower.includes('pass') ||
+        progressLower.includes('verified') ||
+        progressLower.includes('clean')
+      );
+
+      if (workComplete) {
+        const planContent = fs.existsSync(planPath) ? fs.readFileSync(planPath, 'utf8') : '';
+        const planFm = planContent ? parseFrontmatter(planContent) : {};
+
+        const newStatusFm = {
+          ...statusFm,
+          state: 'done',
+          lock: false,
+          completed_at: now(),
+          blocked_reason: '',
+          updated_by: 'recover.mjs',
+          updated_at: now()
+        };
+
+        const newPlanFm = {
+          ...planFm,
+          lock: false,
+          status: 'done',
+          member_id: planFm.member_id || memberId,
+          updated_by: 'recover.mjs',
+          updated_at: now()
+        };
+
+        if (!newPlanFm.project) newPlanFm.project = 'EasyRyde';
+        if (!newPlanFm.purpose) newPlanFm.purpose = 'Member plan — current task objectives and deliverables';
+
+        fs.writeFileSync(statusPath, buildStatusContent(memberId, newStatusFm));
+        fs.writeFileSync(planPath, buildPlanContent(memberId, newPlanFm));
+
+        recovered.push({ memberId, type: 'blocked_but_done', detail: 'state=blocked but work complete -> done' });
       }
     }
 

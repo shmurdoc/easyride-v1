@@ -15,21 +15,35 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         $users = User::query()
+            ->where('tenant_id', $request->user()->tenant_id)
             ->when($request->role, fn ($q, $role) => $q->where('role', $role))
-            ->when($request->tenant_id, fn ($q, $tid) => $q->where('tenant_id', $tid))
             ->latest()
             ->paginate($request->per_page ?? 15);
 
         return response()->json($users);
     }
 
-    public function show(User $user): JsonResponse
+    public function show(Request $request, User $user): JsonResponse
     {
+        if ($request->user()->tenant_id !== $user->tenant_id && ! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         return response()->json($user->load(['tenant', 'driverProfile', 'vehicle']));
     }
 
     public function update(UserUpdateRequest $request, User $user): JsonResponse
     {
+        $currentUser = $request->user();
+
+        if ($currentUser->id !== $user->id && ! $currentUser->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        if (! $currentUser->hasAnyRole(['admin', 'super-admin']) && $currentUser->tenant_id !== $user->tenant_id) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validated();
 
         $user->update($validated);
@@ -37,8 +51,17 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-    public function destroy(User $user): JsonResponse
+    public function destroy(Request $request, User $user): JsonResponse
     {
+        $currentUser = $request->user();
+
+        $isSelfDelete = $currentUser->id === $user->id;
+        $isAdminDelete = $currentUser->hasAnyRole(['admin', 'super-admin']) && $currentUser->tenant_id === $user->tenant_id;
+
+        if (! $isSelfDelete && ! $isAdminDelete) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $user->delete();
 
         return response()->json(null, 204);
@@ -46,11 +69,13 @@ class UserController extends Controller
 
     public function adminStats(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         return response()->json([
-            'total_users' => User::count(),
-            'total_riders' => User::where('role', 'rider')->count(),
-            'total_drivers' => User::where('role', 'driver')->count(),
-            'active_drivers' => User::where('role', 'driver')
+            'total_users' => User::where('tenant_id', $tenantId)->count(),
+            'total_riders' => User::where('tenant_id', $tenantId)->where('role', 'rider')->count(),
+            'total_drivers' => User::where('tenant_id', $tenantId)->where('role', 'driver')->count(),
+            'active_drivers' => User::where('tenant_id', $tenantId)->where('role', 'driver')
                 ->whereHas('driverProfile', fn ($q) => $q->where('is_online', true))
                 ->count(),
         ]);

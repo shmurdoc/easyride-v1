@@ -40,9 +40,15 @@ services:
     environment:
       APP_NAME: EasyRyde
       APP_ENV: ${APP_ENV:-production}
-      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_DEBUG: ${APP_DEBUG:-true}
       APP_KEY: ${APP_KEY:?APP_KEY not set}
       APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: easyryde
+      DB_USERNAME: easyryde
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD not set}
       REDIS_HOST: redis
       REDIS_PASSWORD: null
       SESSION_DRIVER: redis
@@ -52,10 +58,8 @@ services:
       LOG_CHANNEL: stderr
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       MAIL_MAILER: ${MAIL_MAILER:-log}
-    volumes:
-      - vendor:/var/www/html/vendor
     user: root
-    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'php artisan storage:link || true' && php-fpm -R"
+    command: sh -c "chown -R appuser:appuser storage bootstrap/cache public/storage && su appuser -c 'php artisan storage:link || true' && php-fpm -R"
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,9 +76,9 @@ services:
     ports:
       - "${NGINX_PORT:-8000}:80"
       - "${NGINX_SSL_PORT:-8443}:443"
-      - "${NGINX_HTTP_PORT:-8080}:8080"
+      - "${NGINX_HTTP_PORT:-8081}:8080"
     volumes:
-      - vendor:/var/www/html/vendor
+      - ./backend:/var/www/html
     depends_on:
       - app
     restart: unless-stopped
@@ -121,13 +125,11 @@ services:
       context: .
       dockerfile: .docker/php/Dockerfile
     user: root
-    command: sh -c "chown -R appuser:appuser /var/www/html && su appuser -c 'php artisan config:clear' && su appuser -c 'php artisan horizon'"
-    volumes:
-      - vendor:/var/www/html/vendor
+    command: sh -c "chown -R appuser:appuser storage bootstrap/cache public/storage && su appuser -c 'php artisan config:clear' && su appuser -c 'php artisan horizon'"
     environment:
       APP_NAME: EasyRyde
       APP_ENV: ${APP_ENV:-production}
-      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_DEBUG: ${APP_DEBUG:-true}
       APP_KEY: ${APP_KEY:?APP_KEY not set}
       APP_URL: ${APP_URL:-http://localhost:8000}
       DB_CONNECTION: pgsql
@@ -157,4 +159,3 @@ networks:
 volumes:
   pgdata:
   redisdata:
-  vendor:

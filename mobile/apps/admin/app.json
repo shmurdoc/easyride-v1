@@ -9,18 +9,20 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "za.co.easyryde.admin",
-      "config": {
-        "googleMapsApiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "EasyRyde uses your location for admin map views.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "EasyRyde uses your location to track live rides."
+      },
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "android": {
-      "package": "za.co.easyryde.admin",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
-        }
-      }
+      "package": "za.co.easyryde.admin"
     },
-    "plugins": []
+    "plugins": [
+      "expo-location",
+      "expo-notifications"
+    ]
   }
 }

@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\DriverProfile;
-use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Console\Command;
 
@@ -15,15 +14,6 @@ class EncryptExistingPii extends Command
 
     public function handle(): int
     {
-        $this->info('Re-saving User models to trigger encrypted casts...');
-        User::chunk(100, function ($users) {
-            foreach ($users as $user) {
-                $user->phone_number = $user->phone_number;
-                $user->email = $user->email;
-                $user->saveQuietly();
-            }
-        });
-
         $this->info('Re-saving DriverProfile models to trigger encrypted casts...');
         DriverProfile::chunk(100, function ($profiles) {
             foreach ($profiles as $profile) {

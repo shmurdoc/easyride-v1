@@ -5,24 +5,38 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "za.co.easyryde.rider",
-      "config": {
-        "googleMapsApiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "EasyRyde uses your location to find nearby rides.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "EasyRyde uses your location to track your ride in real time."
+      },
+      "entitlements": {
+        "aps-environment": "production"
       }
     },
     "android": {
-      "package": "za.co.easyryde.rider",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDXcaUumZ7RJkaXpqUa2IYhSU3xxJSLvAw"
-        }
-      }
+      "package": "za.co.easyryde.rider"
     },
     "plugins": [
-      "expo-location"
-    ]
+      "expo-location",
+      [
+        "react-native-maps",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow EasyRyde to use your location to find nearby rides."
+        }
+      ],
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4ba44209-c0fe-4311-ba97-3f271ad9eaec"
+      }
+    },
+    "owner": "madoc"
   }
 }

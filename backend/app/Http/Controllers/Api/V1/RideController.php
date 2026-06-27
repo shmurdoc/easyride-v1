@@ -46,6 +46,7 @@ class RideController extends Controller
             ->when($request->to_date, fn ($q, $v) => $q->whereDate('created_at', '<=', $v))
             ->when($request->user()->role === 'rider', fn ($q) => $q->where('rider_id', $request->user()->id))
             ->when($request->user()->role === 'driver', fn ($q) => $q->where('driver_id', $request->user()->id))
+            ->with(['rider', 'driver', 'payment'])
             ->latest()
             ->paginate($request->per_page ?? 15);
 
@@ -83,8 +84,12 @@ class RideController extends Controller
         return response()->json(['ride' => $ride->load('rider')], 201);
     }
 
-    public function show(Ride $ride): JsonResponse
+    public function show(Request $request, Ride $ride): JsonResponse
     {
+        if ($ride->rider_id !== $request->user()->id && $ride->driver_id !== $request->user()->id) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         return response()->json(
             $ride->load([
                 'rider',

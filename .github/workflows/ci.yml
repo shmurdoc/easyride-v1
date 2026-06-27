@@ -43,7 +43,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           extensions: pdo_pgsql, redis, bcmath
           coverage: xdebug
 
@@ -83,7 +83,18 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/socket-server
+        working-directory: socket-server
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +104,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: backend/socket-server/package-lock.json
+          cache-dependency-path: socket-server/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -146,7 +157,10 @@ jobs:
         run: npm ci
 
       - name: TypeScript check
-        run: npx tsc --noEmit
+        run: |
+          npx tsc -p apps/rider/tsconfig.json --noEmit
+          npx tsc -p apps/driver/tsconfig.json --noEmit
+          npx tsc -p apps/admin/tsconfig.json --noEmit
 
   security:
     runs-on: ubuntu-latest

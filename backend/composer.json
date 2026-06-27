@@ -6,10 +6,10 @@
     "keywords": ["laravel", "ridesharing", "delivery"],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4",
         "barryvdh/laravel-dompdf": "^3.1",
         "guzzlehttp/guzzle": "^7.9",
-        "laravel/framework": "^13.8",
+        "laravel/framework": "~13.14.0",
         "laravel/horizon": "^5.47",
         "laravel/pail": "^1.2.5",
         "laravel/sanctum": "^4.3",
@@ -17,17 +17,17 @@
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.0",
         "predis/predis": "^2.3",
-        "sentry/sentry-laravel": "*",
+        "sentry/sentry-laravel": "^4.26",
         "spatie/laravel-permission": "^7.4",
         "spatie/laravel-query-builder": "^6.0",
-        "stripe/stripe-php": "*"
+        "stripe/stripe-php": "^20.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
+        "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5.12"
     },
     "autoload": {
@@ -58,6 +58,10 @@
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "test:coverage": [
+            "@php artisan config:clear --ansi @no_additional_args",
+            "@php artisan test --coverage"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

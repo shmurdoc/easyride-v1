@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useAuth, COLORS, SPACING, RADIUS, SHADOWS } from '@easyryde/shared';
+import { useAuth, wallet, COLORS, SPACING, RADIUS, SHADOWS } from '@easyryde/shared';
 import { GlowButton } from '@easyryde/shared';
 import type { RiderNav } from '@easyryde/shared';
 
@@ -12,15 +12,107 @@ const PAYMENT_METHODS = [
   { id: 'ozow', name: 'Ozow EFT', icon: 'swap-horizontal-outline', detail: 'Linked' },
 ] as const;
 
-const TRANSACTIONS = [
-  { id: '1', label: 'Ride to Zaporizke Hwy', amount: '-R 85.00', time: '2h ago', type: 'debit' },
-  { id: '2', label: 'Top-up via Visa', amount: '+R 500.00', time: '1d ago', type: 'credit' },
-  { id: '3', label: 'Ride to Mechnykova St', amount: '-R 120.00', time: '3d ago', type: 'debit' },
-];
+const QUICK_AMOUNTS = [50, 100, 200, 500];
 
 export default function WalletScreen() {
   const navigation = useNavigation<RiderNav>();
-  const { user } = useAuth();
+  const [walletData, setWalletData] = useState<{ balance: number; pending_balance: number; currency: string } | null>(null);
+  const [transactions, setTransactions] = useState<Array<{ id: string; type: string; amount: number; description: string; created_at: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositAmount, setDepositAmount] = useState('');
+  const [depositing, setDepositing] = useState(false);
+
+  useEffect(() => {
+    fetchWalletData();
+  }, []);
+
+  async function fetchWalletData() {
+    try {
+      setLoading(true);
+      setError(null);
+      const walletResponse = await wallet.get();
+      setWalletData(walletResponse);
+      const transactionsResponse = await wallet.transactions({ per_page: '10' });
+      setTransactions(transactionsResponse.data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load wallet data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeposit() {
+    const amount = parseFloat(depositAmount);
+    if (!amount || amount < 10) { Alert.alert('Invalid amount', 'Minimum deposit is R10'); return; }
+    if (amount > 50000) { Alert.alert('Invalid amount', 'Maximum deposit is R50,000'); return; }
+    setDepositing(true);
+    try {
+      const result = await wallet.deposit(amount, 'stripe');
+      setShowDepositModal(false);
+      setDepositAmount('');
+      Alert.alert(
+        'Deposit Initiated',
+        result.client_secret
+          ? 'Please complete payment with your card to confirm.'
+          : `Deposit of R${amount.toFixed(2)} has been initiated.`,
+      );
+      fetchWalletData();
+    } catch (err: any) {
+      Alert.alert('Deposit Failed', err.message || 'Could not process deposit');
+    } finally {
+      setDepositing(false);
+    }
+  }
+
+  const formatAmount = (amount: number) => {
+    const sign = amount >= 0 ? '+' : '-';
+    return `${sign}R ${Math.abs(amount).toFixed(2)}`;
+  };
+
+  const getTransactionIcon = (type: string) => {
+    const creditTypes = ['deposit', 'refund', 'topup', 'credit'];
+    return creditTypes.some(t => type.toLowerCase().includes(t)) ? 'credit' : 'debit';
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Wallet</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Wallet</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.base }}>
+          <Text style={{ color: COLORS.error, marginBottom: SPACING.md }}>{error}</Text>
+          <GlowButton title="Retry" onPress={fetchWalletData} size="sm" />
+        </View>
+      </View>
+    );
+  }
+
+  const balance = walletData?.balance ?? 0;
+  const paymentMethods = PAYMENT_METHODS.map(m => m.id === 'wallet' ? { ...m, detail: `R ${balance.toFixed(2)}` } : m);
 
   return (
     <View style={styles.container}>
@@ -35,12 +127,12 @@ export default function WalletScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Total Balance</Text>
-          <Text style={styles.balanceAmount}>R 295.00</Text>
+          <Text style={styles.balanceAmount}>R {balance.toFixed(2)}</Text>
           <Text style={styles.balanceSub}>Available for rides and deliveries</Text>
           <View style={styles.balanceActions}>
             <GlowButton
               title="Add Funds"
-              onPress={() => Alert.alert('Add Funds', 'Top-up flow coming soon')}
+              onPress={() => setShowDepositModal(true)}
               size="sm"
               style={{ flex: 1 }}
             />
@@ -48,7 +140,7 @@ export default function WalletScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Payment Methods</Text>
-        {PAYMENT_METHODS.map((method) => (
+        {paymentMethods.map((method) => (
           <TouchableOpacity key={method.id} style={styles.methodRow}>
             <View style={styles.methodIcon}>
               <Ionicons name={method.icon as any} size={20} color={COLORS.primary} />
@@ -62,28 +154,79 @@ export default function WalletScreen() {
         ))}
 
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
-        {TRANSACTIONS.map((tx) => (
-          <View key={tx.id} style={styles.txRow}>
-            <View style={[styles.txIcon, tx.type === 'credit' && styles.txIconCredit]}>
-              <Ionicons
-                name={tx.type === 'credit' ? 'arrow-down' : 'arrow-up'}
-                size={16}
-                color={tx.type === 'credit' ? COLORS.success : COLORS.textMuted}
-              />
-            </View>
-            <View style={styles.txInfo}>
-              <Text style={styles.txLabel}>{tx.label}</Text>
-              <Text style={styles.txTime}>{tx.time}</Text>
-            </View>
-            <Text style={[styles.txAmount, tx.type === 'credit' && styles.txAmountCredit]}>
-              {tx.amount}
-            </Text>
-          </View>
-        ))}
+        {transactions.length === 0 ? (
+          <Text style={{ color: COLORS.textMuted, textAlign: 'center', paddingVertical: SPACING.base }}>
+            No transactions yet
+          </Text>
+        ) : (
+          transactions.map((tx) => {
+            const txType = getTransactionIcon(tx.type);
+            return (
+              <View key={tx.id} style={styles.txRow}>
+                <View style={[styles.txIcon, txType === 'credit' && styles.txIconCredit]}>
+                  <Ionicons
+                    name={txType === 'credit' ? 'arrow-down' : 'arrow-up'}
+                    size={16}
+                    color={txType === 'credit' ? COLORS.success : COLORS.textMuted}
+                  />
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={styles.txLabel}>{tx.description}</Text>
+                  <Text style={styles.txTime}>{new Date(tx.created_at).toLocaleDateString()}</Text>
+                </View>
+                <Text style={[styles.txAmount, txType === 'credit' && styles.txAmountCredit]}>
+                  {formatAmount(tx.amount)}
+                </Text>
+              </View>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
 }
+
+      <Modal visible={showDepositModal} transparent animationType="slide" onRequestClose={() => setShowDepositModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setShowDepositModal(false)}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Add Funds</Text>
+            <Text style={styles.modalSubtitle}>Enter amount to deposit to your wallet</Text>
+
+            <TextInput
+              style={styles.amountInput}
+              placeholder="0.00"
+              placeholderTextColor={COLORS.textDim}
+              keyboardType="decimal-pad"
+              value={depositAmount}
+              onChangeText={setDepositAmount}
+            />
+
+            <View style={styles.quickAmounts}>
+              {QUICK_AMOUNTS.map((amt) => (
+                <TouchableOpacity
+                  key={amt}
+                  style={[styles.quickAmountBtn, depositAmount === String(amt) && styles.quickAmountBtnActive]}
+                  onPress={() => setDepositAmount(String(amt))}
+                >
+                  <Text style={[styles.quickAmountText, depositAmount === String(amt) && styles.quickAmountTextActive]}>
+                    R{amt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <GlowButton
+              title={depositing ? 'Processing...' : `Deposit R${parseFloat(depositAmount || '0').toFixed(2)}`}
+              onPress={handleDeposit}
+              disabled={!depositAmount || depositing}
+              size="lg"
+            />
+          </View>
+        </View>
+      </Modal>
 
 const styles = StyleSheet.create({
   container: {
@@ -227,5 +370,76 @@ const styles = StyleSheet.create({
   },
   txAmountCredit: {
     color: COLORS.success,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: 40,
+  },
+  modalClose: {
+    alignSelf: 'flex-end',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  modalTitle: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: SPACING.xs,
+  },
+  modalSubtitle: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    marginBottom: SPACING.lg,
+  },
+  amountInput: {
+    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+  },
+  quickAmounts: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  quickAmountBtn: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  quickAmountBtnActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryGlow,
+  },
+  quickAmountText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  quickAmountTextActive: {
+    color: COLORS.primary,
   },
 });

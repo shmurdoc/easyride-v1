@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth, useSocket, COLORS, GRADIENTS, SPACING, RADIUS, GlowButton, GlassCard, GradientText, scheduleLocalNotification } from '@easyryde/shared';
+import { useAuth, useSocket, COLORS, GRADIENTS, SPACING, GlowButton, GlassCard, GradientText, scheduleLocalNotification } from '@easyryde/shared';
 import type { DriverNav } from '@easyryde/shared';
 
 export default function RideRequestsScreen({ navigation }: { navigation: DriverNav }) {

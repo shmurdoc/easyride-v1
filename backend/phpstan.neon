@@ -1,0 +1,46 @@
+parameters:
+    level: 5
+    reportUnmatchedIgnoredErrors: false
+    paths:
+        - app
+        - config
+        - database
+        - routes
+    tmpDir: storage/phpstan
+    ignoreErrors:
+        -
+            identifier: property.notFound
+            message: '#Access to an undefined property#'
+        -
+            identifier: class.notFound
+            message: '#(PragmaRX\\Google2FA|Laravel\\Socialite|Google\\Client|Sentry\\Laravel|App\\Models\\ScheduledRide|Illuminate\\Notifications\\Messages\\SmsMessage)#'
+        -
+            identifier: staticMethod.notFound
+            message: '~Call to an undefined static method App\\Models\\.*~'
+        -
+            identifier: staticMethod.notFound
+            message: '~Call to an undefined static method Illuminate\\.*~'
+        -
+            identifier: staticMethod.notFound
+            message: '~Call to an undefined static method (Spatie|Sentry).*~'
+        -
+            identifier: method.notFound
+            message: '#Call to an undefined method Illuminate\\Contracts\\Filesystem\\Filesystem::download#'
+        -
+            identifier: method.protected
+            message: '#Call to protected method .* of class Illuminate\\Database\\Eloquent\\Model.#'
+        -
+            identifier: nullsafe.neverNull
+            message: '#Using nullsafe property access.*is unnecessary#'
+        -
+            identifier: return.type
+            message: '#should return Illuminate\\Database\\Eloquent\\Collection but returns Illuminate\\Support\\Collection#'
+        -
+            identifier: method.unused
+            message: '~Method App\\Services\\FareCalculationService::haversineDistance\(\) is unused~'
+        -
+            identifier: classConstant.unused
+            message: '~Constant App\\Services\\SurgePricingService::DEFAULT_SURGE is unused~'
+        -
+            identifier: class.notFound
+            message: '~Class Monolog\\Handler\\SentryHandler not found~'

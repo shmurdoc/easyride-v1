@@ -10,8 +10,6 @@ export function useNotifications(navigationRef?: NavigationRef) {
   const responseListener = useRef<any>();
 
   useEffect(() => {
-    registerForPushNotificationsAsync();
-
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -36,6 +34,8 @@ export function useNotifications(navigationRef?: NavigationRef) {
       }
     });
 
+    registerForPushNotificationsAsync().catch(() => {});
+
     return () => {
       if (responseListener.current) {
         Notifications.removeNotificationSubscription(responseListener.current);
@@ -57,8 +57,14 @@ async function registerForPushNotificationsAsync() {
     if (!Device.isDevice) return;
 
     const tokenData = await Notifications.getExpoPushTokenAsync();
-    await api.post('/notifications/register-token', { token: tokenData.data });
-  } catch {}
+    try {
+      await api.post('/notifications/register-token', { token: tokenData.data });
+    } catch {
+      // Silent fail - notification registration is non-critical
+    }
+  } catch {
+    // Silent fail - notification setup is non-critical
+  }
 }
 
 export async function scheduleLocalNotification(

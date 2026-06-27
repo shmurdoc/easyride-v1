@@ -19,6 +19,8 @@ const IconFood  = () => <I><path d="M18 8h1a4 4 0 0 1 0 8h-1" /><path d="M2 8h16
 const IconPromo = () => <I><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></I>;
 const IconShield= () => <I><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></I>;
 const IconList  = () => <I><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></I>;
+const IconDollar = () => <I><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></I>;
+const IconBell   = () => <I><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></I>;
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
@@ -30,6 +32,8 @@ const navItems = [
   { to: '/pricing', label: 'Pricing', icon: <IconTag /> },
   { to: '/promo', label: 'Promo Codes', icon: <IconPromo /> },
   { to: '/reports', label: 'Reports', icon: <IconChart /> },
+  { to: '/financial', label: 'Financial', icon: <IconDollar /> },
+  { to: '/notifications', label: 'Notifications', icon: <IconBell /> },
   { to: '/compliance', label: 'Compliance', icon: <IconShield /> },
   { to: '/map', label: 'Live map', icon: <IconMap /> },
   { to: '/settings', label: 'Settings', icon: <IconCog /> },

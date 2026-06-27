@@ -1,5 +1,29 @@
 const geoService = require('../services/geo');
 const { dataClient } = require('../services/redis');
+const config = require('../config');
+
+const apiBaseUrl = config.appApiBaseUrl.replace(/\/$/, '');
+
+async function callApi(method, path, token, body) {
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      return { ok: false, status: response.status, body: text };
+    }
+    return { ok: true, data: await response.json() };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
 
 module.exports = function registerRideHandlers(socket, io) {
   const { userId, role } = socket.data;
@@ -116,6 +140,13 @@ module.exports = function registerRideHandlers(socket, io) {
     try {
       const { rideId, riderId } = data;
 
+      const apiResult = await callApi('POST', `/api/v1/rides/${rideId}/driver-arrived`, socket.data.token);
+      if (!apiResult.ok) {
+        console.error(`[Ride:${userId}] arrived API error:`, apiResult.status || apiResult.error);
+        socket.emit('error', { message: 'Failed to persist driver arrival' });
+        return;
+      }
+
       io.to(`user:${riderId}`).emit('ride:arrived', {
         rideId,
         driverId: userId,
@@ -138,6 +169,13 @@ module.exports = function registerRideHandlers(socket, io) {
     try {
       const { rideId, otherUserId } = data;
 
+      const apiResult = await callApi('POST', `/api/v1/rides/${rideId}/start`, socket.data.token);
+      if (!apiResult.ok) {
+        console.error(`[Ride:${userId}] start API error:`, apiResult.status || apiResult.error);
+        socket.emit('error', { message: 'Failed to persist ride start' });
+        return;
+      }
+
       io.to(`user:${otherUserId}`).emit('ride:started', {
         rideId,
         [role === 'driver' ? 'driverId' : 'riderId']: userId,
@@ -158,6 +196,13 @@ module.exports = function registerRideHandlers(socket, io) {
   socket.on('ride:complete', async (data) => {
     try {
       const { rideId, otherUserId, fare } = data;
+
+      const apiResult = await callApi('POST', `/api/v1/rides/${rideId}/complete`, socket.data.token);
+      if (!apiResult.ok) {
+        console.error(`[Ride:${userId}] complete API error:`, apiResult.status || apiResult.error);
+        socket.emit('error', { message: 'Failed to persist ride completion' });
+        return;
+      }
 
       io.to(`user:${otherUserId}`).emit('ride:completed', {
         rideId,
@@ -184,6 +229,15 @@ module.exports = function registerRideHandlers(socket, io) {
   socket.on('ride:cancel', async (data) => {
     try {
       const { rideId, otherUserId, reason } = data;
+
+      const apiResult = await callApi('POST', `/api/v1/rides/${rideId}/cancel`, socket.data.token, {
+        cancellation_reason: reason || 'Cancelled via app',
+      });
+      if (!apiResult.ok) {
+        console.error(`[Ride:${userId}] cancel API error:`, apiResult.status || apiResult.error);
+        socket.emit('error', { message: 'Failed to persist ride cancellation' });
+        return;
+      }
 
       await dataClient.del(`ride:pending:${rideId}`);
 

@@ -51,15 +51,21 @@ class WalletService
         string $description = '',
     ): WalletTransaction {
         return DB::transaction(function () use ($wallet, $amount, $referenceType, $referenceId, $description) {
-            $balanceBefore = (float) $wallet->balance;
+            $freshWallet = Wallet::where('id', $wallet->id)->lockForUpdate()->first();
 
-            $wallet->decrement('balance', $amount);
+            if ((float) $freshWallet->balance < $amount) {
+                throw new \RuntimeException('Insufficient wallet balance.');
+            }
 
-            return $wallet->transactions()->create([
+            $balanceBefore = (float) $freshWallet->balance;
+
+            $freshWallet->decrement('balance', $amount);
+
+            return $freshWallet->transactions()->create([
                 'type' => 'debit',
                 'amount' => $amount,
                 'balance_before' => $balanceBefore,
-                'balance_after' => (float) $wallet->fresh()->balance,
+                'balance_after' => (float) $freshWallet->fresh()->balance,
                 'reference_type' => $referenceType,
                 'reference_id' => $referenceId,
                 'description' => $description,

@@ -1,25 +1,15 @@
 ---
-member_id: "builder-3"
 state: done
 lock: false
-current_progress: "Backend hardening complete — all deliverables verified"
-started_at: "2026-06-14T20:55:00Z"
-completed_at: "2026-06-14T21:05:00Z"
-blocked_reason: ""
-updated_by: "builder-3"
-updated_at: "2026-06-14T21:05:00Z"
+started_at: "2026-06-21T23:00:00Z"
+completed_at: "2026-06-21T23:30:00Z"
+type: "builder"
+role: "Backend (Laravel / PHP)"
+area: "backend/"
+tech: "PHP 8.4 / Laravel 11"
 ---
 
-# Status — builder-3
-
-## Current State
-running
-
-## Progress
-BE-HARDEN-001: Backend hardening — Token security, FormRequests, API response format
-
-## Blockers
-(none)
-
-## Notes
-Re-dispatched after first subagent didn't execute
+## Completed
+- Fixed PHP version mismatch: ci.yml → 8.4 (was 8.3)
+- Updated composer.json PHP constraint → ^8.4 (was ^8.3)
+- All 3 sources now agree on PHP 8.4

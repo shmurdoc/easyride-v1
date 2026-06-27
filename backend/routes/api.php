@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\Auth\TotpController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\ConfigController;
@@ -41,6 +43,8 @@ Route::prefix('v1')->group(function () {
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:auth-password');
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:auth-password');
+        Route::get('{provider}/redirect', [SocialAuthController::class, 'redirect']);
+        Route::get('{provider}/callback', [SocialAuthController::class, 'callback']);
     });
 
     // Public promo validation
@@ -70,28 +74,27 @@ Route::prefix('v1')->group(function () {
 
         // Users
         Route::apiResource('users', UserController::class)->except(['store']);
-        Route::get('admin/stats', [UserController::class, 'adminStats']);
+        Route::get('admin/stats', [UserController::class, 'adminStats'])->middleware('role:admin|super-admin');
 
         // Rides
         Route::prefix('rides')->group(function () {
             Route::get('/', [RideController::class, 'index']);
-            Route::post('/', [RideController::class, 'store']);
+            Route::post('/', [RideController::class, 'store'])->middleware('throttle:ride-create');
             Route::get('current', [RideController::class, 'current']);
             Route::get('{ride}', [RideController::class, 'show']);
-            Route::post('{ride}/cancel', [RideController::class, 'cancel']);
+            Route::post('{ride}/cancel', [RideController::class, 'cancel'])->middleware('throttle:ride-cancel');
             Route::post('{ride}/rate', [RideController::class, 'rate']);
             Route::post('{ride}/apply-promo', [RideController::class, 'applyPromo']);
-            Route::post('{ride}/driver-accept', [RideController::class, 'driverAccept']);
-            Route::post('{ride}/driver-arrived', [RideController::class, 'driverArrived']);
-            Route::post('{ride}/start', [RideController::class, 'startRide']);
-            Route::post('{ride}/complete', [RideController::class, 'completeRide']);
+            Route::post('{ride}/driver-accept', [RideController::class, 'driverAccept'])->middleware('role:driver');
+            Route::post('{ride}/driver-arrived', [RideController::class, 'driverArrived'])->middleware('role:driver');
+            Route::post('{ride}/start', [RideController::class, 'startRide'])->middleware('role:driver');
+            Route::post('{ride}/complete', [RideController::class, 'completeRide'])->middleware('role:driver');
             Route::post('{ride}/location', [RideController::class, 'updateLocation']);
             Route::get('{ride}/receipt', [RideController::class, 'receipt']);
         });
 
         // Drivers
-        Route::prefix('drivers')->group(function () {
-            Route::get('/', [DriverController::class, 'index']);
+        Route::middleware('role:driver')->prefix('drivers')->group(function () {
             Route::get('nearby-rides', [DriverController::class, 'nearbyRides']);
             Route::put('profile', [DriverController::class, 'updateProfile']);
             Route::post('vehicle', [DriverController::class, 'registerVehicle']);
@@ -99,27 +102,35 @@ Route::prefix('v1')->group(function () {
             Route::get('earnings', [DriverController::class, 'earnings']);
             Route::get('trips', [DriverController::class, 'trips']);
             Route::get('deliveries', [DeliveryController::class, 'driverDeliveries']);
+        });
+
+        // Driver general (accessible by admin too)
+        Route::prefix('drivers')->group(function () {
+            Route::get('/', [DriverController::class, 'index']);
             Route::get('{driver}', [DriverController::class, 'show']);
         });
+
+        // Driver location update (standalone)
+        Route::post('drivers/location', [DriverController::class, 'updateLocation'])->middleware('role:driver');
 
         // Payments
         Route::prefix('payments')->group(function () {
             Route::get('/', [PaymentController::class, 'index']);
             Route::get('methods', [PaymentController::class, 'methods']);
             Route::get('{payment}', [PaymentController::class, 'show']);
-            Route::post('rides/{ride}/pay', [PaymentController::class, 'processRidePayment']);
+            Route::post('rides/{ride}/pay', [PaymentController::class, 'processRidePayment'])->middleware('throttle:payments');
             Route::post('{payment}/refund', [PaymentController::class, 'refund'])->middleware('role:admin|super-admin');
             Route::post('{payment}/dispute', [PaymentController::class, 'dispute']);
-            Route::post('stripe/create-intent', [PaymentController::class, 'createStripeIntent']);
-            Route::post('stripe/confirm', [PaymentController::class, 'confirmStripePayment']);
+            Route::post('stripe/create-intent', [PaymentController::class, 'createStripeIntent'])->middleware('throttle:payments');
+            Route::post('stripe/confirm', [PaymentController::class, 'confirmStripePayment'])->middleware('throttle:payments');
         });
 
         // Wallet
         Route::prefix('wallet')->group(function () {
             Route::get('/', [WalletController::class, 'show']);
             Route::get('transactions', [WalletController::class, 'transactions']);
-            Route::post('deposit', [WalletController::class, 'deposit']);
-            Route::post('withdraw', [WalletController::class, 'withdraw']);
+            Route::post('deposit', [WalletController::class, 'deposit'])->middleware('throttle:wallet-deposit');
+            Route::post('withdraw', [WalletController::class, 'withdraw'])->middleware('throttle:wallet-withdraw');
         });
 
         // Ratings
@@ -133,10 +144,10 @@ Route::prefix('v1')->group(function () {
         // Promo Codes
         Route::prefix('promo-codes')->group(function () {
             Route::get('/', [PromoCodeController::class, 'index']);
-            Route::post('/', [PromoCodeController::class, 'store']);
             Route::get('{promoCode}', [PromoCodeController::class, 'show']);
-            Route::put('{promoCode}', [PromoCodeController::class, 'update']);
-            Route::delete('{promoCode}', [PromoCodeController::class, 'destroy']);
+            Route::post('/', [PromoCodeController::class, 'store'])->middleware('role:admin|super-admin');
+            Route::put('{promoCode}', [PromoCodeController::class, 'update'])->middleware('role:admin|super-admin');
+            Route::delete('{promoCode}', [PromoCodeController::class, 'destroy'])->middleware('role:admin|super-admin');
         });
 
         // Deliveries
@@ -145,7 +156,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [DeliveryController::class, 'store']);
             Route::get('{delivery}', [DeliveryController::class, 'show']);
             Route::put('{delivery}/status', [DeliveryController::class, 'updateStatus']);
-            Route::post('{delivery}/assign', [DeliveryController::class, 'assignDriver']);
+            Route::post('{delivery}/assign', [DeliveryController::class, 'assignDriver'])->middleware('role:admin|super-admin');
         });
 
         // Food Delivery
@@ -161,7 +172,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Driver food orders
-        Route::prefix('driver/food')->group(function () {
+        Route::middleware('role:driver')->prefix('driver/food')->group(function () {
             Route::get('orders', [FoodDeliveryController::class, 'driverOrders']);
             Route::get('orders/available', [FoodDeliveryController::class, 'availableOrders']);
             Route::post('orders/{order}/accept', [FoodDeliveryController::class, 'driverAcceptOrder']);
@@ -224,7 +235,14 @@ Route::prefix('v1')->group(function () {
         });
 
         // Admin
+        // TOTP 2FA (role-protected but not TOTP-protected)
         Route::prefix('admin')->middleware('role:admin|super-admin')->group(function () {
+            Route::post('totp/enable', [TotpController::class, 'enable']);
+            Route::post('totp/verify', [TotpController::class, 'verify']);
+            Route::post('totp/disable', [TotpController::class, 'disable']);
+        });
+
+        Route::prefix('admin')->middleware(['role:admin|super-admin', 'admin.totp'])->group(function () {
             Route::get('dashboard', [AdminController::class, 'dashboard']);
             Route::get('users', [AdminController::class, 'users']);
             Route::get('rides', [AdminController::class, 'rides']);

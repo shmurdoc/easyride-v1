@@ -13,6 +13,6 @@ Schedule::command('scheduled-rides:publish')->everyMinute();
 
 Schedule::command('model:prune', ['--model' => [WalletTransaction::class]])->daily();
 
-Schedule::command('escrow:release')->everyFiveMinutes();
+Schedule::command('escrow:release')->daily();
 Schedule::command('payouts:process --type=daily')->dailyAt('06:00');
 Schedule::command('payouts:process --type=weekly')->weeklyOn(1, '06:00');

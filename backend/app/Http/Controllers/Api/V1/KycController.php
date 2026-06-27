@@ -45,6 +45,10 @@ class KycController extends Controller
 
     public function pending(Request $request): JsonResponse
     {
+        if (! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $verifications = $this->kycService->getPendingVerifications();
 
         return response()->json(['verifications' => $verifications]);
@@ -52,6 +56,10 @@ class KycController extends Controller
 
     public function approve(Request $request, KycVerification $verification): JsonResponse
     {
+        if (! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $this->kycService->approveVerification($verification, $request->user()->id);
 
         return response()->json(['message' => 'Verification approved']);
@@ -59,6 +67,10 @@ class KycController extends Controller
 
     public function reject(KycRejectRequest $request, KycVerification $verification): JsonResponse
     {
+        if (! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validated();
 
         $this->kycService->rejectVerification($verification, $validated['reason'], $request->user()->id);
@@ -66,8 +78,17 @@ class KycController extends Controller
         return response()->json(['message' => 'Verification rejected']);
     }
 
-    public function download(KycVerification $verification, string $documentType): Response
+    public function download(Request $request, KycVerification $verification, string $documentType): Response
     {
-        return $this->kycService->downloadDocument($verification, $documentType);
+        if ($verification->user_id !== $request->user()->id && ! $request->user()->hasRole(['admin', 'super-admin'])) {
+            return response('Unauthorized.', 403);
+        }
+
+        $content = $this->kycService->downloadDocument($verification, $documentType);
+
+        return response($content, 200, [
+            'Content-Type' => 'application/octet-stream',
+            'Content-Disposition' => 'attachment; filename="'.$documentType.'"',
+        ]);
     }
 }

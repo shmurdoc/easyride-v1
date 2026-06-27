@@ -1,5 +1,14 @@
 # EasyRyde — Agent Configuration
 
+## Coverage Setup
+- PHP 8.4.22 NTS VS17 with pcov: `C:\php84\php.exe`
+- Herd-lite PHP (static) cannot load dynamic extensions — use `C:\php84` for coverage
+- Run coverage: `backend\coverage.cmd` or `C:\php84\php.exe artisan test --coverage`
+- Config: `backend\phpunit.xml` (main) / `backend\phpunit.coverage.xml` (coverage variant)
+- Reports: `backend/coverage/clover.xml`, `backend/coverage/html/`, `backend/coverage/coverage.txt`
+- All DLLs in `C:\php\ext` (compiled-in extension_dir for C:\php84)
+- Coverage: 46.0% overall (285/285 pass, 555 assertions)
+
 ## Bootstrap Hook
 On session start, the Leader (eng-manager) MUST:
 1. Run `cd team/scripts && node validate.mjs` to validate all team files

@@ -7,6 +7,6 @@ RUN npm ci --only=production
 
 COPY socket-server/ .
 
-EXPOSE 6001
+EXPOSE 3001
 
-CMD ["node", "server.js"]
+CMD ["node", "src/index.js"]

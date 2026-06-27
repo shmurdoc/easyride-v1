@@ -22,7 +22,8 @@ class PromoCodeController extends Controller
     public function index(Request $request): JsonResponse
     {
         $promoCodes = PromoCode::query()
-            ->when($request->tenant_id, fn ($q, $v) => $q->where('tenant_id', $v))
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->when($request->tenant_id && $request->user()->hasAnyRole(['admin', 'super-admin']), fn ($q, $v) => $q->where('tenant_id', $request->tenant_id))
             ->when($request->is_active, fn ($q, $v) => $q->where('is_active', filter_var($v, FILTER_VALIDATE_BOOLEAN)))
             ->when($request->search, fn ($q, $v) => $q->where('code', 'like', "%{$v}%"))
             ->latest()
@@ -43,13 +44,21 @@ class PromoCodeController extends Controller
         return response()->json($promoCode, 201);
     }
 
-    public function show(PromoCode $promoCode): JsonResponse
+    public function show(Request $request, PromoCode $promoCode): JsonResponse
     {
+        if ($promoCode->tenant_id !== $request->user()->tenant_id && ! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         return response()->json($promoCode->load('tenant'));
     }
 
     public function update(PromoCodeUpdateRequest $request, PromoCode $promoCode): JsonResponse
     {
+        if ($promoCode->tenant_id !== $request->user()->tenant_id && ! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $validated = $request->validated();
 
         $promoCode->update($validated);
@@ -57,8 +66,12 @@ class PromoCodeController extends Controller
         return response()->json($promoCode);
     }
 
-    public function destroy(PromoCode $promoCode): JsonResponse
+    public function destroy(Request $request, PromoCode $promoCode): JsonResponse
     {
+        if ($promoCode->tenant_id !== $request->user()->tenant_id && ! $request->user()->hasAnyRole(['admin', 'super-admin'])) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
         $promoCode->delete();
 
         return response()->json(null, 204);
