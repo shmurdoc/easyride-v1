@@ -62,3 +62,5 @@ docker-compose.prod.green.yml
 backend/.env.testing
 backend/phpstan.phar
 backend/storage/phpstan/
+backend/storage/*-service-account.json
+backend/storage/*credentials*
